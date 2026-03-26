@@ -1,0 +1,31 @@
+# Secrets
+.env
+care package/.env
+
+# Care package — vendored dependency, install via `pip install -e "care package/tinker-cookbook"`
+care package/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual env
+venv/
+.venv/
+
+# Training artifacts
+wandb/
+/tmp/baking-logs/
+
+# Generated data (regenerate with `python generate_data.py`)
+# baking_data.jsonl
+
+# OS
+.DS_Store
+
+# Claude Code
+.claude/
