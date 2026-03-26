@@ -2,8 +2,8 @@
 .env
 care package/.env
 
-# Care package — vendored dependency, install via `pip install -e "care package/tinker-cookbook"`
-care package/
+# Care package secrets
+care package/.env
 
 # Python
 __pycache__/

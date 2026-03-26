@@ -1,0 +1,60 @@
+import { CookbookLink } from '../../components/CookbookLink'
+
+# Your First RL Run
+
+We've provided a minimal script that runs RL on the [GSM8K dataset](https://huggingface.co/datasets/openai/gsm8k): <CookbookLink path="tinker_cookbook/recipes/rl_basic.py">rl_basic.py</CookbookLink>. You can run the minimal RL script from the command line as follows:
+
+```bash
+python -m tinker_cookbook.recipes.rl_basic
+```
+
+This script will fine-tune the Llama-3.1-8B base (pretrained) model on this dataset with the following reward function:
+
+$$
+1[\text{answer is correct}] + 0.1 \times (1[\text{answer is formatted correctly}] - 1)
+$$
+
+The training should take about 1 minute per iteration and climb to about 63% accuracy after 15 iterations (`env/all/correct`). You can look at the printouts for some other metrics of interest:
+
+- `ac_tokens_per_turn`: the number of each tokens in each generated completion
+- `env/all/format`: the fraction of completions that are formatted correctly
+- `env/all/reward/total`: mean total reward (combining format and correctness as defined above)
+- `entropy`: per-token entropy (mean negative log-probability of sampled tokens)
+- `kl_sample_train_{v1,v2}`: two different approximations/estimators of KL divergence between the sampler's and learner's probability distribution (contributed to by numerical differences and rounding noise)
+- `progress/done_frac`: what fraction of the total number of iterations we've completed so far
+- `time/...`: time for different parts of the training loop
+
+You can also look at the `log_path` directory for more detailed metrics. There are several files of interest, which are mostly the same as in the [Supervised Learning](/supervised-learning/sl-basic) case.
+
+## RL logging outputs
+
+When using <CookbookLink path="tinker_cookbook/rl/train.py">`rl/train.py`</CookbookLink>, each iteration can write rollout logs under `log_path`.
+
+- `train_iteration_000123.html`: human-readable logtree report for sampled training rollouts.
+- `train_iteration_000123_logtree.json`: JSON export of the same logtree trace.
+- `train_iteration_000123_rollout_summaries.jsonl`: one JSON object per trajectory (rollout summary records).
+- `eval_<name>_iteration_000123.html`: human-readable logtree report for eval rollouts.
+- `eval_<name>_iteration_000123_logtree.json`: JSON export of the eval logtree trace.
+- `eval_<name>_iteration_000123_rollout_summaries.jsonl`: one JSON object per eval trajectory (for `RLTestSetEvaluator`).
+
+`<name>` is the evaluator name (sanitized for filenames), and iteration numbers are zero-padded.
+
+### `*_logtree.json` structure
+
+`*_logtree.json` is a serialized logtree DOM-like tree:
+
+- Top level: `title`, `started_at`, `path`, `root`.
+- `root` and descendants: `tag`, `attrs`, and `children`.
+- `children` entries are either text strings or nested nodes with the same shape.
+
+This file is useful for programmatic parsing of what appears in the HTML report.
+
+### `*_rollout_summaries.jsonl` structure
+
+Each line is one trajectory record with fields like:
+
+- Metadata: `schema_version`, `split`, `iteration`, `group_idx`, `traj_idx`, `tags`, `sampling_client_step`.
+- Episode totals: `total_reward`, `final_reward`, `trajectory_metrics`, `final_ob_len`.
+- `steps`: list of per-transition objects with `step_idx`, `ob_len`, `ac_len`, `reward`, `episode_done`, `metrics`, and `logs`.
+
+These records are intentionally disaggregated (no aggregate stats), so they are easy to load into downstream analysis pipelines.
