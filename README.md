@@ -89,17 +89,15 @@ The loss function receives `logprobs` from the training model's forward pass (st
 
 ### Care Package
 
-You need the `care package/` directory (not checked into git) containing:
+The `care package/` directory contains:
 - `tinker-cookbook/` — Tinker SDK helpers (renderers, checkpoint utils, tokenizer utils)
-- `.env` — API keys
+- `.env` — API keys (not checked in)
 
-The `.env` file must contain:
+To set up your API keys:
+```bash
+cp "care package/.env.example" "care package/.env"
 ```
-TINKER_API_KEY=tml-...
-OPENROUTER_API_KEY=sk-or-v1-...
-WANDB_API_KEY=...
-WANDB_ENTITY=...
-```
+Then fill in your keys in `care package/.env`.
 
 ### Install Dependencies
 
