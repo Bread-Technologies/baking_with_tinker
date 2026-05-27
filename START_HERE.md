@@ -61,7 +61,7 @@ Check whether `bake.py` exists in the current directory. If yes, skip to Step 2.
 If not, the user just pasted this prompt fresh — *you* clone the repo. Run:
 
 ```bash
-git clone https://github.com/Bread-Technologies/baking_with_tinker.git
+git clone -b xiomara https://github.com/Bread-Technologies/baking_with_tinker.git
 cd baking_with_tinker
 ```
 
