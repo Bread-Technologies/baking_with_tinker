@@ -1,44 +1,66 @@
-"""Configuration constants for Prompt Baking."""
+"""Shared config for bake / sft / rl.
 
-# Model
-MODEL_NAME = "Qwen/Qwen3-8B"           # Tinker model name
-OPENROUTER_MODEL = "qwen/qwen3-8b"     # OpenRouter model name
-RENDERER_NAME = "qwen3_disable_thinking"  # No thinking needed for persona baking
+Each mode has its own section below. Knobs you'd actually touch on a first
+run are at the top of each section.
+"""
 
-# LoRA
+# ---------------------------------------------------------------------------
+# Shared
+# ---------------------------------------------------------------------------
+MODEL_NAME = "Qwen/Qwen3-8B"
+RENDERER_NAME = "qwen3_disable_thinking"
 LORA_RANK = 32
+LOG_DIR = "/tmp/baking-logs"
+WANDB_PROJECT = "baking"
 
-# Top-K KL approximation (paper Section 5 ablation)
-TOP_K = 20
-
-# Data generation
-NUM_QUERIES = 200
-CONCURRENCY = 20
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-TEMPERATURE_DATA_GEN = 0.7
-MAX_TOKENS_RESPONSE = 512
-
-# Training
-BATCH_SIZE = 16          # 16 examples × 20 top-k datums = 320 datums/step
-LEARNING_RATE = 1e-4
-NUM_EPOCHS = 4
-MAX_LENGTH = 2048
-SAVE_EVERY = 20
-
-# Optimizer
+# Adam (used by bake.py; sft.py and rl.py use cookbook defaults)
 ADAM_BETA1 = 0.9
 ADAM_BETA2 = 0.95
 ADAM_EPS = 1e-8
 
-# Verification
+
+# ---------------------------------------------------------------------------
+# Baking (bake.py)
+# ---------------------------------------------------------------------------
+PROMPT_FILE = "prompt.md"
+DATA_FILE = "baking_data.jsonl"
+DATA_META_FILE = "baking_data.meta"   # stores hash of prompt.md used to generate DATA_FILE
+
+# Top-K KL approximation (paper Section 5)
+TOP_K = 20
+
+BAKE_BATCH_SIZE = 16
+BAKE_LEARNING_RATE = 1e-4
+BAKE_NUM_EPOCHS = 4
+BAKE_MAX_LENGTH = 2048
+BAKE_SAVE_EVERY = 20
+
+# Data generation for baking (uses Tinker — same Qwen3-8B as training)
+DATA_GEN_TEMPERATURES = [0.5, 0.7, 0.9, 1.0]
+MAX_TOKENS_RESPONSE = 512
+
+# Verification after baking
 NUM_VERIFY_QUERIES = 10
 TEMPERATURE_VERIFY = 1.0
 MAX_TOKENS_VERIFY = 256
 
-# Paths
-PROMPT_FILE = "prompt.md"
-DATA_FILE = "baking_data.jsonl"
-LOG_DIR = "/tmp/baking-logs"
 
-# W&B
-WANDB_PROJECT = "baking"
+# ---------------------------------------------------------------------------
+# SFT (sft.py) — uses HuggingFaceH4/no_robots via tinker-cookbook
+# ---------------------------------------------------------------------------
+SFT_BATCH_SIZE = 32
+SFT_LEARNING_RATE = 2e-4
+SFT_NUM_EPOCHS = 1
+SFT_MAX_LENGTH = 4096
+SFT_LOG_PATH = "/tmp/baking-logs/sft"
+
+
+# ---------------------------------------------------------------------------
+# RL / GRPO (rl.py) — uses ArithmeticEnv (idiot-proof: reward = correct sum)
+# ---------------------------------------------------------------------------
+RL_BATCH_SIZE = 32        # number of problems per training iteration
+RL_GROUP_SIZE = 8         # rollouts per problem (GRPO needs >1 for a group)
+RL_LEARNING_RATE = 4e-5
+RL_MAX_TOKENS = 32        # generations are short ("9", "121", etc.)
+RL_N_BATCHES = 200
+RL_LOG_PATH = "/tmp/baking-logs/rl"

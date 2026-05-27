@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
 """
-Off-policy data generation for Prompt Baking via OpenRouter.
+Off-policy data generation for Prompt Baking via Tinker sampling.
 
 Generates (user_query, prompted_response) pairs where the response comes from
-a model conditioned on the system prompt. Saves WITHOUT the system prompt —
-this is the whole point of baking.
+the base model conditioned on the system prompt. Saves WITHOUT the system
+prompt — this is the whole point of baking.
+
+Can be run standalone (`python generate_data.py`) or imported and called from
+bake.py (which auto-regenerates when prompt.md changes).
 """
 
-import asyncio
+import hashlib
 import json
-import os
 import sys
 from pathlib import Path
 
-import httpx
+import tinker
 from dotenv import load_dotenv
+from tinker_cookbook import renderers
+from tinker_cookbook.tokenizer_utils import get_tokenizer
 
 import config as C
 
 load_dotenv("care package/.env")
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-if not OPENROUTER_API_KEY:
-    print("ERROR: OPENROUTER_API_KEY not found in environment")
-    sys.exit(1)
 
-# Diverse seed queries spanning many topics
 SEED_QUERIES = [
     # Life advice
     "What should I do when I feel lost in life?",
@@ -90,95 +89,96 @@ SEED_QUERIES = [
 ]
 
 
-async def generate_response(
-    client: httpx.AsyncClient,
-    semaphore: asyncio.Semaphore,
-    system_prompt: str,
-    user_query: str,
-    temperature: float,
-) -> dict | None:
-    """Generate a single response from the prompted model via OpenRouter."""
-    async with semaphore:
-        for attempt in range(3):
-            try:
-                response = await client.post(
-                    f"{C.OPENROUTER_BASE_URL}/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                        "Content-Type": "application/json",
-                    },
-                    json={
-                        "model": C.OPENROUTER_MODEL,
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_query},
-                        ],
-                        "temperature": temperature,
-                        "max_tokens": C.MAX_TOKENS_RESPONSE,
-                    },
-                    timeout=60.0,
-                )
-                response.raise_for_status()
-                data = response.json()
-                content = data["choices"][0]["message"]["content"]
-
-                # Strip <think>...</think> blocks if present
-                if "</think>" in content:
-                    content = content.split("</think>", 1)[1].strip()
-                elif "<think>" in content:
-                    # Unclosed thinking block — skip
-                    return None
-
-                if not content or len(content) < 10:
-                    return None
-
-                # Save WITHOUT system message — the whole point of baking
-                return {
-                    "messages": [
-                        {"role": "user", "content": user_query},
-                        {"role": "assistant", "content": content},
-                    ]
-                }
-            except (httpx.HTTPStatusError, httpx.ReadTimeout, KeyError) as e:
-                if attempt < 2:
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                print(f"  Failed after 3 attempts for: {user_query[:50]}... ({e})")
-                return None
-    return None
+def prompt_hash(prompt_text: str) -> str:
+    """Stable hash of the system prompt for cache invalidation."""
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()[:16]
 
 
-async def main():
-    system_prompt = Path(C.PROMPT_FILE).read_text().strip()
-    print(f"System prompt: {system_prompt[:80]}...")
-    print(f"Seed queries: {len(SEED_QUERIES)}")
+def _strip_thinking(text: str) -> str | None:
+    if "</think>" in text:
+        return text.split("</think>", 1)[1].strip()
+    if "<think>" in text:
+        return None  # unclosed thinking — discard
+    return text.strip()
 
-    # Generate multiple variations per query using different temperatures
-    temperatures = [0.5, 0.7, 0.9, 1.0]
-    tasks = []
-    semaphore = asyncio.Semaphore(C.CONCURRENCY)
 
-    async with httpx.AsyncClient() as client:
-        for query in SEED_QUERIES:
-            for temp in temperatures:
-                tasks.append(
-                    generate_response(client, semaphore, system_prompt, query, temp)
-                )
+def generate(prompt_file: str = C.PROMPT_FILE, data_file: str = C.DATA_FILE,
+             meta_file: str = C.DATA_META_FILE) -> int:
+    """Generate the baking dataset using Tinker sampling. Returns # examples written."""
+    system_prompt = Path(prompt_file).read_text().strip()
+    print(f"System prompt ({len(system_prompt)} chars): {system_prompt[:80]}...")
 
-        print(f"Firing {len(tasks)} requests with concurrency={C.CONCURRENCY}...")
-        results = await asyncio.gather(*tasks)
+    tokenizer = get_tokenizer(C.MODEL_NAME)
+    renderer = renderers.get_renderer(C.RENDERER_NAME, tokenizer)
+    service = tinker.ServiceClient()
+    sc = service.create_sampling_client(base_model=C.MODEL_NAME)
 
-    # Filter None results
-    examples = [r for r in results if r is not None]
-    print(f"Generated {len(examples)} valid examples out of {len(tasks)} attempts")
+    stop = renderer.get_stop_sequences()
 
-    # Save to JSONL
-    with open(C.DATA_FILE, "w") as f:
-        for example in examples:
-            f.write(json.dumps(example) + "\n")
+    print(f"Generating responses for {len(SEED_QUERIES)} queries "
+          f"× {len(C.DATA_GEN_TEMPERATURES)} temperatures = "
+          f"{len(SEED_QUERIES) * len(C.DATA_GEN_TEMPERATURES)} samples")
 
-    print(f"Saved to {C.DATA_FILE}")
+    # Submit all sampling futures, then collect — Tinker handles batching.
+    pending: list[tuple[str, float, object]] = []  # (query, temp, future)
+    for query in SEED_QUERIES:
+        for temp in C.DATA_GEN_TEMPERATURES:
+            mi = renderer.build_generation_prompt([
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query},
+            ])
+            sp = tinker.SamplingParams(
+                max_tokens=C.MAX_TOKENS_RESPONSE,
+                stop=stop,
+                temperature=temp,
+            )
+            future = sc.sample(prompt=mi, num_samples=1, sampling_params=sp)
+            pending.append((query, temp, future))
+
+    examples = []
+    for i, (query, temp, future) in enumerate(pending):
+        try:
+            result = future.result()
+            tokens = result.sequences[0].tokens
+            text = tokenizer.decode(tokens)
+            for s in stop:
+                text = text.replace(s, "")
+            cleaned = _strip_thinking(text)
+            if not cleaned or len(cleaned) < 10:
+                continue
+            examples.append({
+                "messages": [
+                    {"role": "user", "content": query},
+                    {"role": "assistant", "content": cleaned},
+                ]
+            })
+        except Exception as e:
+            print(f"  [{i}] failed for {query[:40]!r} T={temp}: {e}")
+            continue
+        if (i + 1) % 50 == 0:
+            print(f"  collected {len(examples)} / {i + 1} so far")
+
+    print(f"Got {len(examples)} valid examples")
+
+    with open(data_file, "w") as f:
+        for ex in examples:
+            f.write(json.dumps(ex) + "\n")
+
+    Path(meta_file).write_text(prompt_hash(system_prompt))
+    print(f"Saved {data_file} and {meta_file}")
+    return len(examples)
+
+
+def is_stale(prompt_file: str = C.PROMPT_FILE, data_file: str = C.DATA_FILE,
+             meta_file: str = C.DATA_META_FILE) -> bool:
+    """True if data is missing or was generated from a different prompt."""
+    if not Path(data_file).exists() or not Path(meta_file).exists():
+        return True
+    current = prompt_hash(Path(prompt_file).read_text().strip())
+    stored = Path(meta_file).read_text().strip()
+    return current != stored
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if generate() == 0:
+        sys.exit(1)

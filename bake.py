@@ -30,10 +30,10 @@ import wandb
 from dotenv import load_dotenv
 from tinker_cookbook import renderers, checkpoint_utils
 from tinker_cookbook.renderers.base import TrainOnWhat
-from tinker_cookbook.supervised.common import datum_from_model_input_weights
 from tinker_cookbook.tokenizer_utils import get_tokenizer
 
 import config as C
+import generate_data
 
 load_dotenv("care package/.env")
 
@@ -240,9 +240,9 @@ def train():
             "model": C.MODEL_NAME,
             "lora_rank": C.LORA_RANK,
             "top_k": C.TOP_K,
-            "batch_size": C.BATCH_SIZE,
-            "learning_rate": C.LEARNING_RATE,
-            "num_epochs": C.NUM_EPOCHS,
+            "batch_size": C.BAKE_BATCH_SIZE,
+            "learning_rate": C.BAKE_LEARNING_RATE,
+            "num_epochs": C.BAKE_NUM_EPOCHS,
             "loss": f"top{C.TOP_K}_kl",
         },
     )
@@ -279,20 +279,20 @@ def train():
         })
     logger.info(f"Pre-computed {len(examples)} examples")
 
-    n_batches_per_epoch = len(examples) // C.BATCH_SIZE
-    total_steps = n_batches_per_epoch * C.NUM_EPOCHS
+    n_batches_per_epoch = len(examples) // C.BAKE_BATCH_SIZE
+    total_steps = n_batches_per_epoch * C.BAKE_NUM_EPOCHS
     step = 0
     sp = tinker.SamplingParams(max_tokens=1)
 
-    logger.info(f"Training: {C.NUM_EPOCHS} epochs, {n_batches_per_epoch} batches/epoch, "
+    logger.info(f"Training: {C.BAKE_NUM_EPOCHS} epochs, {n_batches_per_epoch} batches/epoch, "
                 f"{total_steps} total steps, top_k={C.TOP_K}")
 
     try:
-        for epoch in range(C.NUM_EPOCHS):
+        for epoch in range(C.BAKE_NUM_EPOCHS):
             for batch_idx in range(n_batches_per_epoch):
                 t0 = time.time()
                 batch_examples = examples[
-                    batch_idx * C.BATCH_SIZE : (batch_idx + 1) * C.BATCH_SIZE
+                    batch_idx * C.BAKE_BATCH_SIZE : (batch_idx + 1) * C.BAKE_BATCH_SIZE
                 ]
 
                 # 1. Get top-K logprobs from prompted base model
@@ -325,7 +325,7 @@ def train():
                         ex["prompted_weights"],
                         topk_lps,
                         C.TOP_K,
-                        C.MAX_LENGTH,
+                        C.BAKE_MAX_LENGTH,
                     )
                     all_datums.extend(datums)
                     all_plps.extend(plps)
@@ -338,7 +338,7 @@ def train():
                 # 3. LR decay
                 lr_mult = max(0.0, 1.0 - step / total_steps)
                 current_adam = tinker.AdamParams(
-                    learning_rate=C.LEARNING_RATE * lr_mult,
+                    learning_rate=C.BAKE_LEARNING_RATE * lr_mult,
                     beta1=C.ADAM_BETA1, beta2=C.ADAM_BETA2, eps=C.ADAM_EPS,
                 )
 
@@ -355,7 +355,7 @@ def train():
                 metrics = {
                     "step": step, "epoch": epoch,
                     "train/datums": len(all_datums),
-                    "train/lr": C.LEARNING_RATE * lr_mult,
+                    "train/lr": C.BAKE_LEARNING_RATE * lr_mult,
                     "time/batch_s": elapsed,
                 }
                 if fb_result.metrics:
@@ -366,10 +366,10 @@ def train():
                 logger.info(
                     f"E{epoch} B{batch_idx}/{n_batches_per_epoch} | "
                     f"KL={kl_val:.4f} datums={len(all_datums)} "
-                    f"lr={C.LEARNING_RATE * lr_mult:.6f} | {elapsed:.1f}s"
+                    f"lr={C.BAKE_LEARNING_RATE * lr_mult:.6f} | {elapsed:.1f}s"
                 )
 
-                if C.SAVE_EVERY > 0 and step > 0 and step % C.SAVE_EVERY == 0:
+                if C.BAKE_SAVE_EVERY > 0 and step > 0 and step % C.BAKE_SAVE_EVERY == 0:
                     checkpoint_utils.save_checkpoint(
                         training_client=tc, name=f"{step:06d}",
                         log_path=C.LOG_DIR, kind="both",
@@ -383,7 +383,7 @@ def train():
             checkpoint_utils.save_checkpoint(
                 training_client=tc, name="final",
                 log_path=C.LOG_DIR, kind="both",
-                loop_state={"step": step, "epoch": C.NUM_EPOCHS},
+                loop_state={"step": step, "epoch": C.BAKE_NUM_EPOCHS},
             )
             logger.info("Saved final checkpoint")
         except Exception as e:
@@ -457,10 +457,14 @@ def main():
     print(f"Loss: Top-{C.TOP_K} KL divergence via forward_backward_custom")
     print("=" * 60)
 
-    if not os.path.exists(C.DATA_FILE):
-        print(f"\nERROR: Data file {C.DATA_FILE} not found.")
-        print("Run: python generate_data.py")
-        sys.exit(1)
+    # Auto-regenerate baking data if missing or if prompt.md has changed.
+    if generate_data.is_stale():
+        print(f"\nBaking data is missing or stale (prompt changed). Regenerating...")
+        if generate_data.generate() == 0:
+            print("\nERROR: data generation produced no examples. Aborting.")
+            sys.exit(1)
+    else:
+        print(f"\nReusing existing {C.DATA_FILE} (prompt hash matches).")
 
     print("\n--- Phase 1: Training ---")
     tc = train()
