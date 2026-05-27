@@ -61,11 +61,9 @@ Check whether `bake.py` exists in the current directory. If yes, skip to Step 2.
 If not, the user just pasted this prompt fresh — *you* clone the repo. Run:
 
 ```bash
-git clone <REPO_URL> baking_with_tinker
+git clone https://github.com/Bread-Technologies/baking_with_tinker.git
 cd baking_with_tinker
 ```
-
-If you don't know the repo URL (only the file contents were given to you), ask the user once: "Where did you get this prompt from? Paste the link." Then continue. Don't guess URLs.
 
 ## Step 2 — Greet the user and explain what's about to happen
 
