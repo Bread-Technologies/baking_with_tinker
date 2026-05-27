@@ -71,7 +71,7 @@ Say something like the following, in your own words, conversationally. Don't dum
 
 > **What we're doing:** Fine-tuning a language model. Off the shelf, a model like Qwen3-8B knows how to talk in general. Fine-tuning means nudging its weights — the billions of numbers that determine how it responds — so it behaves *exactly* how you want for a specific task or style.
 >
-> **What's Tinker?** A service that runs the actual training. Training a model normally needs an expensive GPU (think an H100 graphics card in a data center, several dollars per hour to rent) doing matrix math at very high speed. Tinker rents those out. You write Python on your laptop; Tinker runs the GPU. You pay per second of GPU time used — usually a few cents to a few dollars per run for the stuff we're doing here. Get an API key at https://tinker.thinkingmachines.ai
+> **What's Tinker?** A service that runs the actual training for you. Training a language model normally needs an expensive GPU (think an H100 graphics card in a data center) doing matrix math very fast. Tinker handles the GPUs — you write Python on your laptop, Tinker does the compute. Pricing is **per million tokens processed**, which is much cheaper than renting GPUs by the hour: training Qwen3-8B (what we use by default) costs $0.40 per million training tokens. A typical baking run on this repo is under half a dollar. New accounts get $150 in free credits, which is enough for many runs. Get an API key at https://tinker.thinkingmachines.ai
 >
 > **What's a GPU?** Specialized hardware for the dense matrix math neural networks rely on. Regular CPUs (your laptop's main chip) can do the same math, just ~100× slower. You don't need a GPU locally — Tinker has them.
 >
@@ -135,6 +135,22 @@ Ask: **"What do you actually want to fine-tune the model to do?"** Get a paragra
 
 After every training run, *you* run `python demo.py` (or `python demo.py /tmp/baking-logs/sft` / `/tmp/baking-logs/rl` for the other modes), quote a few outputs to the user, and ask: "What would you change?" If they want different test queries, *you* edit the `queries` list in `demo.py` and rerun.
 
+## How the user talks to the trained model
+
+This is the most important UX expectation in this whole document. **The user talks to the model through you.**
+
+When they say things like "ask it what it thinks of...", "try a harder math problem", "see if it stays in character when I push back", or "have it explain X to a five-year-old" — you run a sampling call against the latest checkpoint and quote the response back. That's the default mode. They never have to know which script to run.
+
+You have three concrete ways to do this; pick whichever is cleanest for the moment:
+
+1. **One-off queries** — edit the `queries` list in `demo.py` to whatever the user asked, run `python demo.py <log_dir_or_default>`, paste the response back. Best for testing two or three things in a row.
+2. **Inline Python via Bash** — if you just need one sample, write a short Python snippet that uses `tinker.ServiceClient().create_sampling_client(model_path=...)`, generates, and prints. Pattern from `demo.py`. Best when you want flexibility without touching files.
+3. **Hand them the chat REPL** — if they explicitly want to type at the model without you in the middle, point them at `chat.py`. *You* run `python chat.py` (or `python chat.py /tmp/baking-logs/sft`) — it's an interactive prompt with multi-turn history. Tell them: "type your message and press enter; 'reset' clears history; 'quit' exits." They drive from there until they want to retrain.
+
+For multi-turn conversations through you, maintain the message history yourself between calls (a Python list of `{"role": "user"/"assistant", "content": "..."}` dicts). Re-render the full history each time via `renderer.build_generation_prompt(history)` and append the model's reply to history before the next user turn. This is what `chat.py` does internally; you can mirror it inline.
+
+Don't make them choose between these — pick the right one for the moment and use it. If in doubt, default to running through you (option 1 or 2).
+
 ## Step 6 — Iterate (you drive every loop)
 
 Fine-tuning is iterative. The user looks at the outputs, says "I want more of X, less of Y," and *you* translate that into a code change and a re-run. They never edit a file or run a command themselves.
@@ -163,7 +179,13 @@ When they describe a change, decide which knob to turn (below), make the edit yo
 
 ## Cost guardrails
 
-A bake run is roughly $0.50-$2 of Tinker compute. SFT and RL with defaults are roughly $2-$10. Multi-hour RL on a hard task can easily run $20+. Before kicking off anything that looks like it'll take more than ~30 minutes or change knobs that scale costs (bigger model, more epochs, more rollouts), tell the user the rough cost estimate and get a yes.
+Tinker charges per million tokens (different rates for prefill, sampling, and training). On Qwen3-8B (the default), it's $0.13/M prefill, $0.40/M sampling, $0.40/M training. Rough estimates on the defaults:
+
+- **Baking** with the shipped config: ~under $0.50 per run (data gen + 4 epochs of training on 200 examples).
+- **SFT** on the full no_robots dataset (~10k examples, 1 epoch): ~$2-4.
+- **RL (GRPO)** on the toy arithmetic env (200 batches): ~$1-3.
+
+New accounts get $150 in free credits — many runs' worth. Bigger models (e.g. Qwen3-235B, Kimi K2.6) are 5-20× more expensive per token. Before switching to a bigger model or running RL with very large batch_size × group_size × n_batches, tell the user the rough cost estimate and get a yes.
 
 ## Things to NOT do
 
