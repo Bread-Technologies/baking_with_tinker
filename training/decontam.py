@@ -1,6 +1,6 @@
 """Decontaminate training prompts against the TPC-H test (the ONLY training-side code that reads the test).
 
-A training prompt is dropped if any of these hold against any of the 22 test questions:
+A training prompt is dropped if any of these hold against any test item (the 22, the fresh TPC-H set, the probes):
   text    : question wording too similar (character 5-gram Jaccard over normalized text)
   struct  : its teacher SQL has the same table set AND the same aggregate/subquery fingerprint
             as a reference query, and they share a distinctive literal or join 3+ tables
@@ -54,10 +54,17 @@ def fingerprint(sql: str):
 
 
 def load_test():
+    """The 22 standard queries plus the fresh TPC-H test and the memorization probes."""
     test = []
     for q, text in QUESTIONS.items():
         sql = (ROOT / "tpch_eval" / "reference" / f"q{q:02d}.sql").read_text()
         test.append({"q": q, "shingles": shingles(text.split("Output columns:")[0]), "fp": fingerprint(sql)})
+    for f in ["fresh_questions.json", "probe_questions.json"]:
+        path = ROOT / "tpch_eval" / "fresh" / f
+        if path.exists():
+            for item in json.load(open(path)):
+                test.append({"q": item["id"], "shingles": shingles(item["question"].split("Output columns:")[0]),
+                             "fp": fingerprint(item["gold_sql"])})
     return test
 
 
@@ -68,14 +75,14 @@ def check(row, test):
     for t in test:
         j = jaccard(sh, t["shingles"])
         if j >= TEXT_JACCARD:
-            return f"text~Q{t['q']} (jaccard {j:.2f})"
+            return f"text~{t['q']} (jaccard {j:.2f})"
         if fp and t["fp"]:
             tables, aggs, shape, lits = fp
             ttables, taggs, tshape, tlits = t["fp"]
             shared = lits & tlits
             same_shape = tables == ttables and aggs == taggs and shape == tshape
             if same_shape and (len(shared) >= 1 or len(tables) >= 3):
-                return f"struct~Q{t['q']} (shared literals {sorted(shared)[:5]})"
+                return f"struct~{t['q']} (shared literals {sorted(shared)[:5]})"
     return None
 
 

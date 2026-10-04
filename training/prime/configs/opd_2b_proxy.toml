@@ -30,7 +30,7 @@ temperature = 1.0
 [[orchestrator.train.source]]
 name = "sql-proxy"
 env.taskset.id = "sql-opd"
-env.taskset.data_path = "/data/proxy_train.jsonl"
+env.taskset.data_path = "/data/proxy_train_decontam.jsonl"
 env.agent.harness.id = "null"
 env.agent.runtime.type = "subprocess"
 
