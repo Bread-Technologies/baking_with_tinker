@@ -161,6 +161,9 @@ def make_generator(args):
         from openai import OpenAI
 
         client = OpenAI(base_url=args.base_url, api_key=args.api_key or "EMPTY")
+        # vLLM: toggle thinking for hybrid models (small Qwen3.5 models default to non-thinking)
+        extra = {} if args.thinking is None else {
+            "extra_body": {"chat_template_kwargs": {"enable_thinking": args.thinking == "on"}}}
 
         def gen(prompt: str) -> str:
             resp = client.chat.completions.create(
@@ -168,8 +171,11 @@ def make_generator(args):
                 max_tokens=args.max_tokens,
                 temperature=0.0,
                 messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+                **extra,
             )
-            return resp.choices[0].message.content or ""
+            msg = resp.choices[0].message
+            reasoning = getattr(msg, "reasoning_content", None) or getattr(msg, "reasoning", None)
+            return (f"<think>{reasoning}</think>\n" if reasoning else "") + (msg.content or "")
 
         return gen
 
@@ -243,6 +249,9 @@ def main():
     ap.add_argument("--dump-prompts", help="write {question number: full prompt} JSON here and exit")
     ap.add_argument("--renderer", help="tinker backend: override the recommended renderer")
     ap.add_argument("--sf", type=float, default=0.01, help="TPC-H scale factor")
+    ap.add_argument("--thinking", choices=["on", "off"], help="openai backend: force thinking on/off (vLLM)")
+    ap.add_argument("--tag", default="", help="suffix for the results filename")
+    ap.add_argument("--concurrency", type=int, default=1, help="parallel generation requests")
     ap.add_argument("--max-tokens", type=int, default=4096)
     ap.add_argument("--queries", default="1-22", help="e.g. 1-22 or 1,3,5")
     args = ap.parse_args()
@@ -262,14 +271,26 @@ def main():
         return
     gen = make_generator(args)
 
+    prompts = {q: f"Schema:\n\n{schema}\n\nQuestion:\n{QUESTIONS[q]}" for q in qids}
+
+    def generate(q):
+        try:
+            return gen(prompts[q]), None
+        except Exception as e:  # noqa: BLE001
+            return "", f"generation error: {e}"
+
+    # Generation can run in parallel (servers batch requests); scoring stays sequential on one connection.
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+        generated = dict(zip(qids, pool.map(generate, qids)))
+
     results = []
     for q in qids:
         gold = run_sql(con, (ROOT / "reference" / f"q{q:02d}.sql").read_text())
-        prompt = f"Schema:\n\n{schema}\n\nQuestion:\n{QUESTIONS[q]}"
-        try:
-            response = gen(prompt)
-        except Exception as e:  # noqa: BLE001
-            response, sql, ok, why = "", "", False, f"generation error: {e}"
+        response, err = generated[q]
+        if err:
+            sql, ok, why = "", False, err
         else:
             sql = extract_sql(response)
             try:
@@ -284,8 +305,9 @@ def main():
 
     out_dir = ROOT / "results"
     out_dir.mkdir(exist_ok=True)
-    out = out_dir / f"{args.backend}__{args.model.replace('/', '_')}.json"
+    out = out_dir / f"{args.backend}__{args.model.replace('/', '_')}{args.tag}.json"
     out.write_text(json.dumps({"model": args.model, "backend": args.backend, "sf": args.sf,
+                               "thinking": args.thinking, "max_tokens": args.max_tokens,
                                "score": score, "total": len(results), "results": results}, indent=2))
     print(f"wrote {out}")
 
