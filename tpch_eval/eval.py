@@ -191,7 +191,11 @@ def make_generator(args):
             msgs = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
             out = client.sample(renderer.build_generation_prompt(msgs), sampling_params=params, num_samples=1).result()
             msg, _ = renderer.parse_response(out.sequences[0].tokens)
-            return get_text_content(msg)
+            # Keep the reasoning trace in the saved response; extract_sql strips <think> blocks.
+            parts = msg["content"] if isinstance(msg["content"], list) else []
+            thinking = "".join(p["thinking"] for p in parts if p.get("type") == "thinking")
+            text = get_text_content(msg)
+            return f"<think>{thinking}</think>\n{text}" if thinking else text
 
         return gen
 
