@@ -38,7 +38,7 @@ having trained on the test, with an honest account of how well it generalizes.
 |---|---|---|
 | Qwen3.5-397B-A17B (teacher) | thinking, greedy | 22/22 |
 | Claude Opus 5.5 (subagent) | closed-book | 21/22 |
-| Qwen3.5-4B | thinking, t=0.6 ×4 | 12.5/22 (11–14); Spider dev 74.7% (n=300) |
+| Qwen3.5-4B | thinking, t=0.6 ×4 | 12.5/22 (11–14); Spider dev 74.7% (n=300, t=0.6), 73.7% ±5.0 (t=1.0) |
 | Qwen3-8B | thinking, greedy | 15/22 |
 | Qwen2.5-Coder-1.5B-Instruct | greedy | 4/22 |
 | Qwen3.5-2B | no thinking, greedy | 3/22 |
