@@ -327,6 +327,26 @@ def main():
     lo, hi = min(per_sample), max(per_sample)
     print(f"\n{args.model}: {score:.2f}/{len(qids)} mean over {args.samples} sample(s) (range {lo}-{hi})")
 
+    # Execution-based majority vote (test-time; uses only the model's own SQL and the database):
+    # run every sampled query, group samples by result set, answer with the largest group.
+    vote_correct = 0
+    for q in qids:
+        groups = {}
+        for r in (x for x in results if x["q"] == q):
+            try:
+                rows = run_sql(con, r["sql"]) if r["sql"] else None
+            except Exception:  # noqa: BLE001
+                rows = None
+            if rows is None:
+                continue
+            key = repr(sorted((tuple(norm(v) for v in row) for row in rows), key=sort_key))
+            groups.setdefault(key, []).append(r["correct"])
+        if groups:
+            best = max(groups.values(), key=len)
+            vote_correct += bool(best[0])
+    if args.samples > 1:
+        print(f"{args.model}: majority-vote@{args.samples} {vote_correct}/{len(qids)}")
+
     out_dir = ROOT / "results"
     out_dir.mkdir(exist_ok=True)
     prefix = "" if args.set == "tpch" else f"{args.set}__"
@@ -334,7 +354,8 @@ def main():
     out.write_text(json.dumps({"model": args.model, "backend": args.backend, "sf": args.sf,
                                "thinking": args.thinking, "max_tokens": args.max_tokens,
                                "temperature": args.temperature, "top_p": args.top_p, "samples": args.samples,
-                               "set": args.set, "score": score, "per_sample": per_sample, "total": len(qids), "results": results}, indent=2))
+                               "set": args.set, "score": score, "per_sample": per_sample,
+                               "vote_score": vote_correct if args.samples > 1 else None, "total": len(qids), "results": results}, indent=2))
     print(f"wrote {out}")
 
 
