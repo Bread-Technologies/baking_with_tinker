@@ -77,3 +77,8 @@ The probe gain matches the TPC-H gain, so this is better reading and reasoning, 
 | P2 target (new TPC-H-schema questions) | **86.3%** | 15.75 (14–17) | 22.0 (21–23) | 16.0 (14–17) |
 
 **Finding:** target-track training gains +10 points on target_dev but nothing on the test sets. target_dev shares a generator, and so a style, with the target training data, so **it is biased toward the target track**. Rule change: target_dev decides LR, steps, rank and similar settings *within* a data mix. Data-mix choices are judged on proxy-vs-target parity, and confirmed later on the tests at checkpoints chosen in advance. The proxy track, which never sees the TPC-H schema, generalizes to TPC-H at least as well as the target track.
+
+### Round 1 (2B, prime-rl, proxy) throughput notes
+- Each step takes 3–4.5 minutes on 2×H100. About 55% of rollouts hit the 6,144-token cap (the 2B thinks at length), so each step is about 650k student tokens plus about 700k teacher-scored tokens on Tinker.
+- The vLLM router circuit breaker opens briefly at some weight updates (step 5: 78% of traces failed and were resampled).
+- Plan: tune the recipe on Tinker with the 4B (fast, run in parallel), then move it to the 2B with 4 GPUs (2 inference + 2 trainer).
