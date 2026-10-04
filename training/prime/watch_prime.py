@@ -26,7 +26,14 @@ def orchestrator_log(run: str) -> str:
             found = subprocess.run(["modal", "container", "exec", c, "--", "find", f"/outputs/{run}", "-name",
                                     "orchestrator.log", "-printf", "%T@ %p\n"],
                                    capture_output=True, text=True, timeout=90).stdout.split("\n")
-            found = sorted((float(t), p) for t, _, p in (line.partition(" ") for line in found if line.strip()))
+            parsed = []
+            for line in found:  # exec merges find's stderr ("find: ...") into stdout; skip those
+                t, _, path = line.partition(" ")
+                try:
+                    parsed.append((float(t), path))
+                except ValueError:
+                    continue
+            found = sorted(parsed)
             if found:
                 _where[run] = (c, found[-1][1])  # newest log: earlier attempts leave old run dirs behind
                 break
