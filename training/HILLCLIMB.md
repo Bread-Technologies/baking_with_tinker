@@ -184,3 +184,12 @@ Gains are steady but slow. Operational notes: twice the runs were cancelled beca
 The repairs remove all execution-error failures (binder errors). Two TPC-H questions remain wrong in most samples: one at 0% and one at 25%. These are reasoning errors, not dialect errors. Per the rules, the specific test failures are not used to shape training. The generic levers still open are harder multi-skill prompts and multi-turn training with execution feedback.
 
 2B (b01) step 80: TPC-H 11.25 (9–12); majority@4 14; pass@4 15. Fresh 13.5; probes 9.0.
+
+### s10: continue the 4B s03 on 171 hard multi-skill questions (×6) + mix, 8k rollouts, 100 steps (final chosen in advance)
+
+| s10 final, 16 samples + 2 repairs | TPC-H 22 | Fresh (30) | Probes (22) |
+|---|---|---|---|
+| mean of single samples | 18.88 (17–20) | 26.94 | 19.56 |
+| majority vote @16 | 20 | 28 | **21** |
+
+This is a small gain over s03 (mean +0.1 TPC-H, +0.4 fresh, +0.6 probes; probe vote 20 → 21). TPC-H stays at 20/22 under voting. One question is still wrong in every sample, and which question is second-hardest moved, which points to noise rather than a fixed gap. Diminishing returns on the 4B. Focus moves to the 2B, the goal model.
