@@ -31,3 +31,6 @@ b01_2b_mix_lr2e-4 step80 probe: 9.00/22 mean over 4 sample(s) (range 7-10)
 4B s10 final x16 retry2 tpch: 18.88/22 mean over 16 sample(s) (range 17-20) | majority-vote@16 20/22
 4B s10 final x16 retry2 fresh: 26.94/30 mean over 16 sample(s) (range 25-29) | majority-vote@16 28/30
 4B s10 final x16 retry2 probe: 19.56/22 mean over 16 sample(s) (range 18-21) | majority-vote@16 21/22
+b01_2b_mix_lr2e-4 step100 tpch: 12.62/22 mean over 16 sample(s) (range 10-16) | majority-vote@16 16/22
+b01_2b_mix_lr2e-4 step100 fresh: 17.75/30 mean over 16 sample(s) (range 13-21) | majority-vote@16 21/30
+b01_2b_mix_lr2e-4 step100 probe: 12.38/22 mean over 16 sample(s) (range 9-14) | majority-vote@16 15/22

@@ -193,3 +193,5 @@ The repairs remove all execution-error failures (binder errors). Two TPC-H quest
 | majority vote @16 | 20 | 28 | **21** |
 
 This is a small gain over s03 (mean +0.1 TPC-H, +0.4 fresh, +0.6 probes; probe vote 20 → 21). TPC-H stays at 20/22 under voting. One question is still wrong in every sample, and which question is second-hardest moved, which points to noise rather than a fixed gap. Diminishing returns on the 4B. Focus moves to the 2B, the goal model.
+
+2B (b01) step 100, 16 samples + 2 repairs: TPC-H mean 12.62 (10–16), **vote@16 16/22**; fresh mean 17.75, vote 21/30; probes mean 12.38, vote 15/22. Still climbing from step 80 (mean 11.25 → 12.62). Training continues to step 200; steps 120–200 are queued for the same eval.
