@@ -1,0 +1,67 @@
+# On-policy distillation: Qwen3.5-2B student <- Qwen3.5-397B-A17B teacher (Tinker, via shim on :8001).
+# Proxy track: BIRD + Spider train prompts only (no TPC-H schema). Dev = held-out Spider DBs.
+max_steps = 100
+seq_len = 12288
+
+[model]
+name = "Qwen/Qwen3.5-2B"
+
+[orchestrator]
+batch_size = 128          # rollouts per step (32 prompts x group_size 4)
+
+[orchestrator.train]
+group_size = 4
+
+[orchestrator.train.algo]
+type = "opd"
+
+[orchestrator.train.algo.teacher]
+name = "Qwen/Qwen3.5-397B-A17B"
+base_url = "http://127.0.0.1:8001/v1"
+
+[orchestrator.renderer]
+name = "qwen3.5"
+enable_thinking = true
+
+[orchestrator.train.sampling]
+max_completion_tokens = 4096
+temperature = 1.0
+
+[[orchestrator.train.source]]
+name = "sql-proxy"
+env.taskset.id = "sql-opd"
+env.taskset.data_path = "/data/proxy_train.jsonl"
+env.agent.harness.id = "null"
+env.agent.runtime.type = "subprocess"
+
+[orchestrator.eval]
+interval = 10
+
+[orchestrator.eval.select]
+limit = 200
+shuffle = true
+
+[orchestrator.eval.sampling]
+max_completion_tokens = 8192
+temperature = 1.0
+
+[[orchestrator.eval.source]]
+name = "spider-dev"
+env.taskset.id = "sql-opd"
+env.taskset.data_path = "/data/spider_dev_clean.jsonl"
+env.agent.harness.id = "null"
+env.agent.runtime.type = "subprocess"
+
+[trainer.optim]
+lr = 1e-4
+
+[trainer.model.lora]
+rank = 32
+
+[ckpt]
+interval = 10
+
+[inference]
+
+[inference.vllm]
+gpu_memory_utilization = 0.85
