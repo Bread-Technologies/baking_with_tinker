@@ -71,12 +71,15 @@ def load(split: str, n: int | None, seed: int = 0) -> list[dict]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--split", default="spider_dev", choices=["spider_dev", "spider_test"])
+    ap.add_argument("--split", default="spider_dev", choices=["spider_dev", "spider_test", "spider_dev_clean", "spider_test_clean"])
     ap.add_argument("--backend", required=True, choices=["claude", "tinker", "openai", "hf", "gold"])
     ap.add_argument("--model", default="gold")
     ap.add_argument("--base-url")
     ap.add_argument("--api-key")
     ap.add_argument("--renderer")
+    ap.add_argument("--model-path")
+    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--top-p", type=float, default=1.0)
     ap.add_argument("--thinking", choices=["on", "off"])
     ap.add_argument("--max-tokens", type=int, default=8192)
     ap.add_argument("--n", type=int, help="random subset size (fixed seed)")

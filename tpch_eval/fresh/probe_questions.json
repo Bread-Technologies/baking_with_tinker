@@ -1,0 +1,156 @@
+[
+  {
+    "id": "P01",
+    "base_q": 1,
+    "change": "Filter on receipt date instead of ship date.",
+    "question": "Pricing summary report. For all line items received on or before 1998-09-02, group by return flag and line status and report:\nthe return flag, the line status, total quantity, total extended price, total discounted price (extended price * (1 - discount)),\ntotal charge (discounted price * (1 + tax)), average quantity, average extended price, average discount, and the number of line items.\nSort by return flag, then line status.\nOutput columns: l_returnflag, l_linestatus, sum_qty, sum_base_price, sum_disc_price, sum_charge, avg_qty, avg_price, avg_disc, count_order",
+    "gold_sql": "SELECT\n    l_returnflag,\n    l_linestatus,\n    sum(l_quantity) AS sum_qty,\n    sum(l_extendedprice) AS sum_base_price,\n    sum(l_extendedprice * (1 - l_discount)) AS sum_disc_price,\n    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,\n    avg(l_quantity) AS avg_qty,\n    avg(l_extendedprice) AS avg_price,\n    avg(l_discount) AS avg_disc,\n    count(*) AS count_order\nFROM\n    lineitem\nWHERE\n    l_receiptdate <= CAST('1998-09-02' AS date)\nGROUP BY\n    l_returnflag,\n    l_linestatus\nORDER BY\n    l_returnflag,\n    l_linestatus"
+  },
+  {
+    "id": "P02",
+    "base_q": 2,
+    "change": "Minimum supply cost is taken over all suppliers of the part worldwide, not only European ones.",
+    "question": "Minimum cost supplier. For each part of size 15 whose type ends in 'BRASS', find the suppliers in the 'EUROPE' region who supply it at the minimum supply cost among all suppliers of that part worldwide (any region). Report the supplier's account balance, supplier name, nation name, part key,\npart manufacturer, supplier address, supplier phone, and supplier comment.\nSort by account balance descending, then nation name, supplier name, and part key. Return the top 100 rows.\nOutput columns: s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment",
+    "gold_sql": "SELECT\n    s_acctbal,\n    s_name,\n    n_name,\n    p_partkey,\n    p_mfgr,\n    s_address,\n    s_phone,\n    s_comment\nFROM\n    part,\n    supplier,\n    partsupp,\n    nation,\n    region\nWHERE\n    p_partkey = ps_partkey\n    AND s_suppkey = ps_suppkey\n    AND p_size = 15\n    AND p_type LIKE '%BRASS'\n    AND s_nationkey = n_nationkey\n    AND n_regionkey = r_regionkey\n    AND r_name = 'EUROPE'\n    AND ps_supplycost = (\n        SELECT\n            min(ps_supplycost)\n        FROM\n            partsupp\n        WHERE\n            p_partkey = ps_partkey)\nORDER BY\n    s_acctbal DESC,\n    n_name,\n    s_name,\n    p_partkey\nLIMIT 100"
+  },
+  {
+    "id": "P03",
+    "base_q": 3,
+    "change": "Revenue sums over all line items of the order, not only those shipped after 1995-03-15.",
+    "question": "Shipping priority. For customers in market segment 'BUILDING', find orders placed before 1995-03-15 that had line items shipped after 1995-03-15.\nFor each such order, report the order key, the revenue (sum of extended price * (1 - discount) over all of the order's line items, regardless of ship date),\nthe order date, and the ship priority.\nSort by revenue descending, then order date. Return the top 10 rows.\nOutput columns: l_orderkey, revenue, o_orderdate, o_shippriority",
+    "gold_sql": "SELECT\n    l_orderkey,\n    sum(l_extendedprice * (1 - l_discount)) AS revenue,\n    o_orderdate,\n    o_shippriority\nFROM\n    customer,\n    orders,\n    lineitem\nWHERE\n    c_mktsegment = 'BUILDING'\n    AND c_custkey = o_custkey\n    AND l_orderkey = o_orderkey\n    AND o_orderdate < CAST('1995-03-15' AS date)\n    AND EXISTS (\n        SELECT\n            *\n        FROM\n            lineitem l2\n        WHERE\n            l2.l_orderkey = o_orderkey\n            AND l2.l_shipdate > CAST('1995-03-15' AS date))\nGROUP BY\n    l_orderkey,\n    o_orderdate,\n    o_shippriority\nORDER BY\n    revenue DESC,\n    o_orderdate\nLIMIT 10"
+  },
+  {
+    "id": "P04",
+    "base_q": 4,
+    "change": "Late means shipped (not received) after the commit date.",
+    "question": "Order priority checking. Count the orders placed in the quarter starting 1993-07-01 (on or after 1993-07-01 and before 1993-10-01) that have at least\none line item shipped later than its commit date. Report the count per order priority.\nSort by order priority.\nOutput columns: o_orderpriority, order_count",
+    "gold_sql": "SELECT\n    o_orderpriority,\n    count(*) AS order_count\nFROM\n    orders\nWHERE\n    o_orderdate >= CAST('1993-07-01' AS date)\n    AND o_orderdate < CAST('1993-10-01' AS date)\n    AND EXISTS (\n        SELECT\n            *\n        FROM\n            lineitem\n        WHERE\n            l_orderkey = o_orderkey\n            AND l_commitdate < l_shipdate)\nGROUP BY\n    o_orderpriority\nORDER BY\n    o_orderpriority"
+  },
+  {
+    "id": "P05",
+    "base_q": 5,
+    "change": "Only the supplier must be in the nation; the customer can be from anywhere.",
+    "question": "Local supplier volume. For each nation in the 'ASIA' region, compute the revenue (sum of extended price * (1 - discount)) from line items whose\nsupplier is in that nation (the customer may be from any nation), for orders placed in 1994 (on or after 1994-01-01 and before 1995-01-01).\nSort by revenue descending.\nOutput columns: n_name, revenue",
+    "gold_sql": "SELECT\n    n_name,\n    sum(l_extendedprice * (1 - l_discount)) AS revenue\nFROM\n    customer,\n    orders,\n    lineitem,\n    supplier,\n    nation,\n    region\nWHERE\n    c_custkey = o_custkey\n    AND l_orderkey = o_orderkey\n    AND l_suppkey = s_suppkey\n    AND s_nationkey = n_nationkey\n    AND n_regionkey = r_regionkey\n    AND r_name = 'ASIA'\n    AND o_orderdate >= CAST('1994-01-01' AS date)\n    AND o_orderdate < CAST('1995-01-01' AS date)\nGROUP BY\n    n_name\nORDER BY\n    revenue DESC"
+  },
+  {
+    "id": "P06",
+    "base_q": 6,
+    "change": "Quantity greater than 24 instead of less than 24.",
+    "question": "Forecasting revenue change. Compute the total of extended price * discount for line items shipped in 1994 (on or after 1994-01-01 and before 1995-01-01)\nwith a discount between 0.05 and 0.07 inclusive and a quantity greater than 24.\nOutput columns: revenue",
+    "gold_sql": "SELECT\n    sum(l_extendedprice * l_discount) AS revenue\nFROM\n    lineitem\nWHERE\n    l_shipdate >= CAST('1994-01-01' AS date)\n    AND l_shipdate < CAST('1995-01-01' AS date)\n    AND l_discount BETWEEN 0.05\n    AND 0.07\n    AND l_quantity > 24"
+  },
+  {
+    "id": "P07",
+    "base_q": 7,
+    "change": "Group by order year instead of ship year.",
+    "question": "Volume shipping. Report the value of goods shipped between 'FRANCE' and 'GERMANY' (supplier in one nation, customer in the other, both directions)\nfor line items shipped between 1995-01-01 and 1996-12-31 inclusive. Value is extended price * (1 - discount).\nGroup by supplier nation name, customer nation name, and order year (year of the order date).\nSort by supplier nation, customer nation, year.\nOutput columns: supp_nation, cust_nation, l_year, revenue",
+    "gold_sql": "SELECT\n    supp_nation,\n    cust_nation,\n    l_year,\n    sum(volume) AS revenue\nFROM (\n    SELECT\n        n1.n_name AS supp_nation,\n        n2.n_name AS cust_nation,\n        extract(year FROM o_orderdate) AS l_year,\n        l_extendedprice * (1 - l_discount) AS volume\n    FROM\n        supplier,\n        lineitem,\n        orders,\n        customer,\n        nation n1,\n        nation n2\n    WHERE\n        s_suppkey = l_suppkey\n        AND o_orderkey = l_orderkey\n        AND c_custkey = o_custkey\n        AND s_nationkey = n1.n_nationkey\n        AND c_nationkey = n2.n_nationkey\n        AND ((n1.n_name = 'FRANCE'\n                AND n2.n_name = 'GERMANY')\n            OR (n1.n_name = 'GERMANY'\n                AND n2.n_name = 'FRANCE'))\n        AND l_shipdate BETWEEN CAST('1995-01-01' AS date)\n        AND CAST('1996-12-31' AS date)) AS shipping\nGROUP BY\n    supp_nation,\n    cust_nation,\n    l_year\nORDER BY\n    supp_nation,\n    cust_nation,\n    l_year"
+  },
+  {
+    "id": "P08",
+    "base_q": 8,
+    "change": "Market share of Brazilian customers rather than Brazilian suppliers.",
+    "question": "National market share. For orders placed between 1995-01-01 and 1996-12-31 inclusive by customers in the 'AMERICA' region, considering only parts of type\n'ECONOMY ANODIZED STEEL', compute for each order year the fraction of revenue (extended price * (1 - discount)) ordered by customers from 'BRAZIL'\nout of the total revenue for those line items (suppliers from any nation).\nSort by year.\nOutput columns: o_year, mkt_share",
+    "gold_sql": "SELECT\n    o_year,\n    sum(\n        CASE WHEN nation = 'BRAZIL' THEN\n            volume\n        ELSE\n            0\n        END) / sum(volume) AS mkt_share\nFROM (\n    SELECT\n        extract(year FROM o_orderdate) AS o_year,\n        l_extendedprice * (1 - l_discount) AS volume,\n        n1.n_name AS nation\n    FROM\n        part,\n        supplier,\n        lineitem,\n        orders,\n        customer,\n        nation n1,\n        nation n2,\n        region\n    WHERE\n        p_partkey = l_partkey\n        AND s_suppkey = l_suppkey\n        AND l_orderkey = o_orderkey\n        AND o_custkey = c_custkey\n        AND c_nationkey = n1.n_nationkey\n        AND n1.n_regionkey = r_regionkey\n        AND r_name = 'AMERICA'\n        AND s_nationkey = n2.n_nationkey\n        AND o_orderdate BETWEEN CAST('1995-01-01' AS date)\n        AND CAST('1996-12-31' AS date)\n        AND p_type = 'ECONOMY ANODIZED STEEL') AS all_nations\nGROUP BY\n    o_year\nORDER BY\n    o_year"
+  },
+  {
+    "id": "P09",
+    "base_q": 9,
+    "change": "Group by customer nation instead of supplier nation.",
+    "question": "Product type profit measure. For parts whose name contains 'green', compute the profit per customer nation (nation of the ordering customer) and order year, where profit for a line item\nis extended price * (1 - discount) - (the supplier's supply cost for that part from partsupp) * quantity.\nSort by nation name ascending, then year descending.\nOutput columns: nation, o_year, sum_profit",
+    "gold_sql": "SELECT\n    nation,\n    o_year,\n    sum(amount) AS sum_profit\nFROM (\n    SELECT\n        n_name AS nation,\n        extract(year FROM o_orderdate) AS o_year,\n        l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity AS amount\n    FROM\n        part,\n        supplier,\n        lineitem,\n        partsupp,\n        orders,\n        customer,\n        nation\n    WHERE\n        s_suppkey = l_suppkey\n        AND ps_suppkey = l_suppkey\n        AND ps_partkey = l_partkey\n        AND p_partkey = l_partkey\n        AND o_orderkey = l_orderkey\n        AND o_custkey = c_custkey\n        AND c_nationkey = n_nationkey\n        AND p_name LIKE '%green%') AS profit\nGROUP BY\n    nation,\n    o_year\nORDER BY\n    nation,\n    o_year DESC"
+  },
+  {
+    "id": "P10",
+    "base_q": 10,
+    "change": "Filter returned line items by ship date in the quarter instead of order date.",
+    "question": "Returned item reporting. For line items shipped in the quarter starting 1993-10-01 (on or after 1993-10-01 and before 1994-01-01), find the customers with returned\nline items (return flag 'R'). For each customer report: customer key, customer name, lost revenue (sum of extended price * (1 - discount) over those returned items),\naccount balance, nation name, address, phone, and comment.\nSort by revenue descending. Return the top 20 rows.\nOutput columns: c_custkey, c_name, revenue, c_acctbal, n_name, c_address, c_phone, c_comment",
+    "gold_sql": "SELECT\n    c_custkey,\n    c_name,\n    sum(l_extendedprice * (1 - l_discount)) AS revenue,\n    c_acctbal,\n    n_name,\n    c_address,\n    c_phone,\n    c_comment\nFROM\n    customer,\n    orders,\n    lineitem,\n    nation\nWHERE\n    c_custkey = o_custkey\n    AND l_orderkey = o_orderkey\n    AND l_shipdate >= CAST('1993-10-01' AS date)\n    AND l_shipdate < CAST('1994-01-01' AS date)\n    AND l_returnflag = 'R'\n    AND c_nationkey = n_nationkey\nGROUP BY\n    c_custkey,\n    c_name,\n    c_acctbal,\n    c_phone,\n    n_name,\n    c_address,\n    c_comment\nORDER BY\n    revenue DESC\nLIMIT 20"
+  },
+  {
+    "id": "P11",
+    "base_q": 11,
+    "change": "Threshold is relative to the total stock value of all suppliers (any nation), not just German ones.",
+    "question": "Important stock identification. For suppliers in 'GERMANY', compute for each part the total value of available stock (supply cost * available quantity, summed\nover those suppliers). Report only parts whose value is greater than 0.0001 times the total value of all available stock from all suppliers (any nation).\nSort by value descending.\nOutput columns: ps_partkey, value",
+    "gold_sql": "SELECT\n    ps_partkey,\n    sum(ps_supplycost * ps_availqty) AS value\nFROM\n    partsupp,\n    supplier,\n    nation\nWHERE\n    ps_suppkey = s_suppkey\n    AND s_nationkey = n_nationkey\n    AND n_name = 'GERMANY'\nGROUP BY\n    ps_partkey\nHAVING\n    sum(ps_supplycost * ps_availqty) > (\n        SELECT\n            sum(ps_supplycost * ps_availqty) * 0.0001000000\n        FROM\n            partsupp)\nORDER BY\n    value DESC"
+  },
+  {
+    "id": "P12",
+    "base_q": 12,
+    "change": "Year filter on ship date instead of receipt date.",
+    "question": "Shipping modes and order priority. For line items with ship mode 'MAIL' or 'SHIP' that were shipped in 1994 (on or after 1994-01-01 and before 1995-01-01),\nwere received after their commit date, and were shipped before their commit date: count, per ship mode, the number of such line items belonging to orders with\npriority '1-URGENT' or '2-HIGH' (high_line_count) and the number belonging to orders with any other priority (low_line_count).\nSort by ship mode.\nOutput columns: l_shipmode, high_line_count, low_line_count",
+    "gold_sql": "SELECT\n    l_shipmode,\n    sum(\n        CASE WHEN o_orderpriority = '1-URGENT'\n            OR o_orderpriority = '2-HIGH' THEN\n            1\n        ELSE\n            0\n        END) AS high_line_count,\n    sum(\n        CASE WHEN o_orderpriority <> '1-URGENT'\n            AND o_orderpriority <> '2-HIGH' THEN\n            1\n        ELSE\n            0\n        END) AS low_line_count\nFROM\n    orders,\n    lineitem\nWHERE\n    o_orderkey = l_orderkey\n    AND l_shipmode IN ('MAIL', 'SHIP')\n    AND l_commitdate < l_receiptdate\n    AND l_shipdate < l_commitdate\n    AND l_shipdate >= CAST('1994-01-01' AS date)\n    AND l_shipdate < CAST('1995-01-01' AS date)\nGROUP BY\n    l_shipmode\nORDER BY\n    l_shipmode"
+  },
+  {
+    "id": "P13",
+    "base_q": 13,
+    "change": "Only customers who have placed at least one order (of any kind) are counted.",
+    "question": "Customer distribution. For every customer who has placed at least one order (of any kind), count their orders, excluding orders whose comment matches the pattern\n'%special%requests%'. Then report how many customers have each order count.\nSort by number of customers descending, then order count descending.\nOutput columns: c_count, custdist",
+    "gold_sql": "SELECT\n    c_count,\n    count(*) AS custdist\nFROM (\n    SELECT\n        c_custkey,\n        count(o_orderkey)\n    FROM\n        customer\n    LEFT OUTER JOIN orders ON c_custkey = o_custkey\n    AND o_comment NOT LIKE '%special%requests%'\n    WHERE c_custkey IN (SELECT o_custkey FROM orders)\nGROUP BY\n    c_custkey) AS c_orders (c_custkey,\n        c_count)\nGROUP BY\n    c_count\nORDER BY\n    custdist DESC,\n    c_count DESC"
+  },
+  {
+    "id": "P14",
+    "base_q": 14,
+    "change": "Use receipt date instead of ship date for September 1995.",
+    "question": "Promotion effect. For line items received in September 1995 (on or after 1995-09-01 and before 1995-10-01), compute the percentage (0-100) of revenue\n(extended price * (1 - discount)) that came from parts whose type starts with 'PROMO'.\nOutput columns: promo_revenue",
+    "gold_sql": "SELECT\n    100.00 * sum(\n        CASE WHEN p_type LIKE 'PROMO%' THEN\n            l_extendedprice * (1 - l_discount)\n        ELSE\n            0\n        END) / sum(l_extendedprice * (1 - l_discount)) AS promo_revenue\nFROM\n    lineitem,\n    part\nWHERE\n    l_partkey = p_partkey\n    AND l_receiptdate >= date '1995-09-01'\n    AND l_receiptdate < CAST('1995-10-01' AS date)"
+  },
+  {
+    "id": "P15",
+    "base_q": 15,
+    "change": "Supplier(s) with the minimum (not maximum) total revenue.",
+    "question": "Top supplier. Compute each supplier's total revenue (extended price * (1 - discount)) from line items shipped in the quarter starting 1996-01-01\n(on or after 1996-01-01 and before 1996-04-01). Report the supplier(s) with the minimum total revenue: supplier key, name, address, phone, and total revenue.\nSort by supplier key.\nOutput columns: s_suppkey, s_name, s_address, s_phone, total_revenue",
+    "gold_sql": "WITH revenue AS (\n    SELECT\n        l_suppkey AS supplier_no,\n        sum(l_extendedprice * (1 - l_discount)) AS total_revenue\n    FROM\n        lineitem\n    WHERE\n        l_shipdate >= CAST('1996-01-01' AS date)\n      AND l_shipdate < CAST('1996-04-01' AS date)\n    GROUP BY\n        supplier_no\n)\nSELECT\n    s_suppkey,\n    s_name,\n    s_address,\n    s_phone,\n    total_revenue\nFROM\n    supplier,\n    revenue\nWHERE\n    s_suppkey = supplier_no\n    AND total_revenue = (\n        SELECT\n            min(total_revenue)\n        FROM revenue)\nORDER BY\n    s_suppkey"
+  },
+  {
+    "id": "P16",
+    "base_q": 16,
+    "change": "Extra exclusion: suppliers with a negative account balance.",
+    "question": "Parts/supplier relationship. Count the number of distinct suppliers who can supply parts that are not of brand 'Brand#45', whose type does not start with\n'MEDIUM POLISHED', and whose size is one of 49, 14, 23, 45, 19, 3, 36, 9. Exclude suppliers whose comment matches '%Customer%Complaints%', and also exclude suppliers whose account balance is negative.\nGroup by brand, type, and size.\nSort by supplier count descending, then brand, type, size ascending.\nOutput columns: p_brand, p_type, p_size, supplier_cnt",
+    "gold_sql": "SELECT\n    p_brand,\n    p_type,\n    p_size,\n    count(DISTINCT ps_suppkey) AS supplier_cnt\nFROM\n    partsupp,\n    part\nWHERE\n    p_partkey = ps_partkey\n    AND p_brand <> 'Brand#45'\n    AND p_type NOT LIKE 'MEDIUM POLISHED%'\n    AND p_size IN (49, 14, 23, 45, 19, 3, 36, 9)\n    AND ps_suppkey NOT IN (\n        SELECT\n            s_suppkey\n        FROM\n            supplier\n        WHERE\n            s_comment LIKE '%Customer%Complaints%'\n            OR s_acctbal < 0)\nGROUP BY\n    p_brand,\n    p_type,\n    p_size\nORDER BY\n    supplier_cnt DESC,\n    p_brand,\n    p_type,\n    p_size"
+  },
+  {
+    "id": "P17",
+    "base_q": 17,
+    "change": "Drop the container condition (all containers of Brand#23).",
+    "question": "Small-quantity-order revenue. For parts of brand 'Brand#23' (any container), consider line items whose quantity is less than 20% of the average\nquantity of all line items for that same part. Report the sum of extended price of those line items divided by 7.0 (average yearly revenue).\nOutput columns: avg_yearly",
+    "gold_sql": "SELECT\n    sum(l_extendedprice) / 7.0 AS avg_yearly\nFROM\n    lineitem,\n    part\nWHERE\n    p_partkey = l_partkey\n    AND p_brand = 'Brand#23'\n    AND l_quantity < (\n        SELECT\n            0.2 * avg(l_quantity)\n        FROM\n            lineitem\n        WHERE\n            l_partkey = p_partkey)"
+  },
+  {
+    "id": "P18",
+    "base_q": 18,
+    "change": "Last column is the total extended price of the order's line items instead of total quantity.",
+    "question": "Large volume customer. Find orders whose total line item quantity is greater than 300. For each, report customer name, customer key, order key, order date,\norder total price, and the total extended price of the order's line items.\nSort by total price descending, then order date. Return the top 100 rows.\nOutput columns: c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, sum_extendedprice",
+    "gold_sql": "SELECT\n    c_name,\n    c_custkey,\n    o_orderkey,\n    o_orderdate,\n    o_totalprice,\n    sum(l_extendedprice)\nFROM\n    customer,\n    orders,\n    lineitem\nWHERE\n    o_orderkey IN (\n        SELECT\n            l_orderkey\n        FROM\n            lineitem\n        GROUP BY\n            l_orderkey\n        HAVING\n            sum(l_quantity) > 300)\n    AND c_custkey = o_custkey\n    AND o_orderkey = l_orderkey\nGROUP BY\n    c_name,\n    c_custkey,\n    o_orderkey,\n    o_orderdate,\n    o_totalprice\nORDER BY\n    o_totalprice DESC,\n    o_orderdate\nLIMIT 100"
+  },
+  {
+    "id": "P19",
+    "base_q": 19,
+    "change": "Ship mode 'REG AIR' (the value that exists in the data) instead of 'AIR REG'.",
+    "question": "Discounted revenue. Compute total revenue (extended price * (1 - discount)) for line items with ship mode 'AIR' or 'REG AIR' and ship instruction 'DELIVER IN PERSON'\nwhose part satisfies one of:\n (a) brand 'Brand#12', container in ('SM CASE','SM BOX','SM PACK','SM PKG'), quantity between 1 and 11 inclusive, size between 1 and 5 inclusive;\n (b) brand 'Brand#23', container in ('MED BAG','MED BOX','MED PKG','MED PACK'), quantity between 10 and 20 inclusive, size between 1 and 10 inclusive;\n (c) brand 'Brand#34', container in ('LG CASE','LG BOX','LG PACK','LG PKG'), quantity between 20 and 30 inclusive, size between 1 and 15 inclusive.\nOutput columns: revenue",
+    "gold_sql": "SELECT\n    sum(l_extendedprice * (1 - l_discount)) AS revenue\nFROM\n    lineitem,\n    part\nWHERE (p_partkey = l_partkey\n    AND p_brand = 'Brand#12'\n    AND p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG')\n    AND l_quantity >= 1\n    AND l_quantity <= 1 + 10\n    AND p_size BETWEEN 1 AND 5\n    AND l_shipmode IN ('AIR', 'REG AIR')\n    AND l_shipinstruct = 'DELIVER IN PERSON')\n    OR (p_partkey = l_partkey\n        AND p_brand = 'Brand#23'\n        AND p_container IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')\n        AND l_quantity >= 10\n        AND l_quantity <= 10 + 10\n        AND p_size BETWEEN 1 AND 10\n        AND l_shipmode IN ('AIR', 'REG AIR')\n        AND l_shipinstruct = 'DELIVER IN PERSON')\n    OR (p_partkey = l_partkey\n        AND p_brand = 'Brand#34'\n        AND p_container IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')\n        AND l_quantity >= 20\n        AND l_quantity <= 20 + 10\n        AND p_size BETWEEN 1 AND 15\n        AND l_shipmode IN ('AIR', 'REG AIR')\n        AND l_shipinstruct = 'DELIVER IN PERSON')"
+  },
+  {
+    "id": "P20",
+    "base_q": 20,
+    "change": "Part name contains 'forest' anywhere, not only at the start.",
+    "question": "Potential part promotion. Find suppliers in 'CANADA' who have, for at least one part whose name contains 'forest' anywhere, an available quantity greater than half\nof the total quantity of that part shipped by that supplier in 1994 (shipped on or after 1994-01-01 and before 1995-01-01).\nReport supplier name and address.\nSort by supplier name.\nOutput columns: s_name, s_address",
+    "gold_sql": "SELECT\n    s_name,\n    s_address\nFROM\n    supplier,\n    nation\nWHERE\n    s_suppkey IN (\n        SELECT\n            ps_suppkey\n        FROM\n            partsupp\n        WHERE\n            ps_partkey IN (\n                SELECT\n                    p_partkey\n                FROM\n                    part\n                WHERE\n                    p_name LIKE '%forest%')\n                AND ps_availqty > (\n                    SELECT\n                        0.5 * sum(l_quantity)\n                    FROM\n                        lineitem\n                    WHERE\n                        l_partkey = ps_partkey\n                        AND l_suppkey = ps_suppkey\n                        AND l_shipdate >= CAST('1994-01-01' AS date)\n                        AND l_shipdate < CAST('1995-01-01' AS date)))\n            AND s_nationkey = n_nationkey\n            AND n_name = 'CANADA'\n        ORDER BY\n            s_name"
+  },
+  {
+    "id": "P21",
+    "base_q": 21,
+    "change": "Some other supplier on the order was ALSO late (EXISTS instead of NOT EXISTS).",
+    "question": "Suppliers who kept orders waiting. For suppliers in 'SAUDI ARABIA', count line items where: the order has status 'F'; the supplier's line item was received\nafter its commit date; the order has at least one line item from a different supplier; and at least one line item from a different supplier on that order was also received\nafter its commit date. Report supplier name and the count.\nSort by count descending, then supplier name. Return the top 100 rows.\nOutput columns: s_name, numwait",
+    "gold_sql": "SELECT\n    s_name,\n    count(*) AS numwait\nFROM\n    supplier,\n    lineitem l1,\n    orders,\n    nation\nWHERE\n    s_suppkey = l1.l_suppkey\n    AND o_orderkey = l1.l_orderkey\n    AND o_orderstatus = 'F'\n    AND l1.l_receiptdate > l1.l_commitdate\n    AND EXISTS (\n        SELECT\n            *\n        FROM\n            lineitem l2\n        WHERE\n            l2.l_orderkey = l1.l_orderkey\n            AND l2.l_suppkey <> l1.l_suppkey)\n    AND EXISTS (\n        SELECT\n            *\n        FROM\n            lineitem l3\n        WHERE\n            l3.l_orderkey = l1.l_orderkey\n            AND l3.l_suppkey <> l1.l_suppkey\n            AND l3.l_receiptdate > l3.l_commitdate)\n    AND s_nationkey = n_nationkey\n    AND n_name = 'SAUDI ARABIA'\nGROUP BY\n    s_name\nORDER BY\n    numwait DESC,\n    s_name\nLIMIT 100"
+  },
+  {
+    "id": "P22",
+    "base_q": 22,
+    "change": "Customers who HAVE placed an order instead of never.",
+    "question": "Global sales opportunity. Consider customers whose country code (the first two characters of their phone number) is one of '13','31','23','29','30','18','17',\nwhose account balance is greater than the average positive account balance (balance > 0.00) of customers with those country codes, and who have placed at least one order.\nFor each country code report the number of such customers and the sum of their account balances.\nSort by country code.\nOutput columns: cntrycode, numcust, totacctbal",
+    "gold_sql": "SELECT\n    cntrycode,\n    count(*) AS numcust,\n    sum(c_acctbal) AS totacctbal\nFROM (\n    SELECT\n        substring(c_phone FROM 1 FOR 2) AS cntrycode,\n        c_acctbal\n    FROM\n        customer\n    WHERE\n        substring(c_phone FROM 1 FOR 2) IN ('13', '31', '23', '29', '30', '18', '17')\n        AND c_acctbal > (\n            SELECT\n                avg(c_acctbal)\n            FROM\n                customer\n            WHERE\n                c_acctbal > 0.00\n                AND substring(c_phone FROM 1 FOR 2) IN ('13', '31', '23', '29', '30', '18', '17'))\n            AND EXISTS (\n                SELECT\n                    *\n                FROM\n                    orders\n                WHERE\n                    o_custkey = c_custkey)) AS custsale\nGROUP BY\n    cntrycode\nORDER BY\n    cntrycode"
+  }
+]

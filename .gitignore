@@ -35,3 +35,4 @@ tpch_eval/data/
 
 # Training data (downloaded / generated)
 training/data/
+training/runs/

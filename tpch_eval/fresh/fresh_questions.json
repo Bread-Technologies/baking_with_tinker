@@ -1,0 +1,212 @@
+[
+  {
+    "id": "F01",
+    "question": "Order status summary. For orders placed in 1995 (on or after 1995-01-01 and before 1996-01-01), report for each order status the number of orders,\nthe sum of the order total price, and the average order total price.\nSort by order status.\nOutput columns: o_orderstatus, order_count, total_price, avg_price",
+    "gold_sql": "SELECT o_orderstatus, count(*) AS order_count, sum(o_totalprice) AS total_price, avg(o_totalprice) AS avg_price\nFROM orders\nWHERE o_orderdate >= DATE '1995-01-01' AND o_orderdate < DATE '1996-01-01'\nGROUP BY o_orderstatus\nORDER BY o_orderstatus",
+    "skills": "single-table filter, group by, aggregates",
+    "why_hard": "Easy warm-up; only requires a correct half-open date range."
+  },
+  {
+    "id": "F02",
+    "question": "Regional supplier balances. For each region, report the number of suppliers located in that region, the sum of their account balances,\nand the number of those suppliers whose account balance is negative (less than 0).\nSort by region name.\nOutput columns: r_name, supplier_count, total_acctbal, negative_count",
+    "gold_sql": "SELECT r_name, count(*) AS supplier_count, sum(s_acctbal) AS total_acctbal,\n       sum(CASE WHEN s_acctbal < 0 THEN 1 ELSE 0 END) AS negative_count\nFROM supplier JOIN nation ON s_nationkey = n_nationkey JOIN region ON n_regionkey = r_regionkey\nGROUP BY r_name\nORDER BY r_name",
+    "skills": "3-way join, conditional count",
+    "why_hard": "Easy; needs the supplier->nation->region join path and a conditional count."
+  },
+  {
+    "id": "F03",
+    "question": "Machinery orders by nation. For every nation (all 25, including nations with no qualifying orders), count the orders placed in March 1996\n(on or after 1996-03-01 and before 1996-04-01) by customers of that nation whose market segment is 'MACHINERY'. Nations with no such orders must appear with a count of 0.\nSort by order count descending, then nation name.\nOutput columns: n_name, order_count",
+    "gold_sql": "SELECT n_name, count(o_orderkey) AS order_count\nFROM nation\nLEFT JOIN customer ON c_nationkey = n_nationkey AND c_mktsegment = 'MACHINERY'\nLEFT JOIN orders ON o_custkey = c_custkey AND o_orderdate >= DATE '1996-03-01' AND o_orderdate < DATE '1996-04-01'\nGROUP BY n_name\nORDER BY order_count DESC, n_name",
+    "skills": "LEFT JOIN chain keeping zeros, filters in ON clause, count(col) vs count(*)",
+    "why_hard": "Putting the filters in WHERE or using count(*) silently drops or miscounts the zero-order nations."
+  },
+  {
+    "id": "F04",
+    "question": "Above-average customers per nation. For each nation, compute the average account balance of the customers in that nation, and count how many customers\nin that nation have an account balance strictly greater than that nation's average.\nSort by nation name.\nOutput columns: n_name, nation_avg_acctbal, above_avg_count",
+    "gold_sql": "WITH na AS (SELECT c_nationkey, avg(c_acctbal) AS a FROM customer GROUP BY c_nationkey)\nSELECT n_name, na.a AS nation_avg_acctbal, count(*) AS above_avg_count\nFROM customer JOIN na ON customer.c_nationkey = na.c_nationkey JOIN nation ON n_nationkey = customer.c_nationkey\nWHERE c_acctbal > na.a\nGROUP BY n_name, na.a\nORDER BY n_name",
+    "skills": "correlated / per-group average threshold",
+    "why_hard": "The threshold is per nation, not global; comparing to the overall average is a common mistake."
+  },
+  {
+    "id": "F05",
+    "question": "Building-segment stronghold per region. For each region, find the nation (or nations, if tied) in that region with the largest number of customers in market segment 'BUILDING'.\nReport the region name, the nation name, and that number of 'BUILDING' customers. If several nations in a region tie for the maximum, report all of them.\nSort by region name, then nation name.\nOutput columns: r_name, n_name, customer_count",
+    "gold_sql": "WITH cnt AS (\n  SELECT r_name, n_name, count(*) AS customer_count\n  FROM customer JOIN nation ON c_nationkey = n_nationkey JOIN region ON n_regionkey = r_regionkey\n  WHERE c_mktsegment = 'BUILDING'\n  GROUP BY r_name, n_name)\nSELECT r_name, n_name, customer_count\nFROM cnt c1\nWHERE customer_count = (SELECT max(customer_count) FROM cnt c2 WHERE c2.r_name = c1.r_name)\nORDER BY r_name, n_name",
+    "skills": "group-wise argmax with ties",
+    "why_hard": "Must keep ties; ROW_NUMBER() or LIMIT 1 per group loses tied nations."
+  },
+  {
+    "id": "F06",
+    "question": "Year-over-year revenue. For each order year from 1993 through 1997 inclusive (by order date), compute revenue as the sum of extended price * (1 - discount)\nover all line items of orders placed that year, and the percentage change from the previous year's revenue: 100 * (revenue - previous year revenue) / previous year revenue.\nFor 1993 the percentage change must be computed against 1992 revenue (orders placed in 1992), even though 1992 itself is not reported.\nSort by year.\nOutput columns: o_year, revenue, pct_change",
+    "gold_sql": "WITH y AS (\n  SELECT extract(year FROM o_orderdate) AS o_year, sum(l_extendedprice * (1 - l_discount)) AS revenue\n  FROM orders JOIN lineitem ON l_orderkey = o_orderkey\n  GROUP BY 1),\nw AS (SELECT o_year, revenue, 100 * (revenue - lag(revenue) OVER (ORDER BY o_year)) / lag(revenue) OVER (ORDER BY o_year) AS pct_change FROM y)\nSELECT o_year, revenue, pct_change FROM w WHERE o_year BETWEEN 1993 AND 1997 ORDER BY o_year",
+    "skills": "window LAG, filtering after the window",
+    "why_hard": "Filtering years before computing LAG gives NULL for 1993; must filter after the window."
+  },
+  {
+    "id": "F07",
+    "question": "Quarterly shipments by mode. For line items shipped in 1995 (on or after 1995-01-01 and before 1996-01-01), count the line items per ship mode\nin each calendar quarter of the ship date (q1 = January-March, q2 = April-June, q3 = July-September, q4 = October-December).\nSort by ship mode.\nOutput columns: l_shipmode, q1, q2, q3, q4",
+    "gold_sql": "SELECT l_shipmode,\n  sum(CASE WHEN extract(quarter FROM l_shipdate) = 1 THEN 1 ELSE 0 END) AS q1,\n  sum(CASE WHEN extract(quarter FROM l_shipdate) = 2 THEN 1 ELSE 0 END) AS q2,\n  sum(CASE WHEN extract(quarter FROM l_shipdate) = 3 THEN 1 ELSE 0 END) AS q3,\n  sum(CASE WHEN extract(quarter FROM l_shipdate) = 4 THEN 1 ELSE 0 END) AS q4\nFROM lineitem\nWHERE l_shipdate >= DATE '1995-01-01' AND l_shipdate < DATE '1996-01-01'\nGROUP BY l_shipmode\nORDER BY l_shipmode",
+    "skills": "CASE pivot, date part extraction",
+    "why_hard": "Pivot of rows into fixed columns; moderate."
+  },
+  {
+    "id": "F08",
+    "question": "High-revenue suppliers in 1997. For each supplier, compute revenue as the sum of extended price * (1 - discount) over its line items shipped in 1997\n(on or after 1997-01-01 and before 1998-01-01). Consider only suppliers with at least one such line item. Report the suppliers whose revenue is more than\n1.2 times the average of these per-supplier revenues.\nSort by revenue descending.\nOutput columns: s_name, revenue",
+    "gold_sql": "WITH r AS (\n  SELECT l_suppkey, sum(l_extendedprice * (1 - l_discount)) AS revenue\n  FROM lineitem WHERE l_shipdate >= DATE '1997-01-01' AND l_shipdate < DATE '1998-01-01'\n  GROUP BY l_suppkey)\nSELECT s_name, revenue FROM r JOIN supplier ON s_suppkey = l_suppkey\nWHERE revenue > 1.2 * (SELECT avg(revenue) FROM r)\nORDER BY revenue DESC",
+    "skills": "HAVING-style threshold from an aggregate of aggregates",
+    "why_hard": "Threshold is the average of per-supplier totals, not the average line item revenue."
+  },
+  {
+    "id": "F09",
+    "question": "Suppliers without Q1 1996 air shipments. Find the suppliers that did not ship any line item with ship mode 'AIR' during the first quarter of 1996\n(ship date on or after 1996-01-01 and before 1996-04-01). Suppliers with no line items at all in that period also qualify. Report supplier key and name.\nSort by supplier key.\nOutput columns: s_suppkey, s_name",
+    "gold_sql": "SELECT s_suppkey, s_name FROM supplier\nWHERE NOT EXISTS (\n  SELECT 1 FROM lineitem\n  WHERE l_suppkey = s_suppkey AND l_shipmode = 'AIR'\n    AND l_shipdate >= DATE '1996-01-01' AND l_shipdate < DATE '1996-04-01')\nORDER BY s_suppkey",
+    "skills": "NOT EXISTS anti-join",
+    "why_hard": "Requires an anti-join; grouping suppliers that had non-AIR shipments is the classic wrong answer."
+  },
+  {
+    "id": "F10",
+    "question": "Returning-but-skipped customers. Find customers who placed at least one order in 1993 and at least one order in 1997 but no order in 1995\n(by order date, calendar years). Report, for each market segment, the number of such customers.\nSort by market segment.\nOutput columns: c_mktsegment, customer_count",
+    "gold_sql": "WITH s AS (\n  (SELECT o_custkey FROM orders WHERE extract(year FROM o_orderdate) = 1993\n   INTERSECT\n   SELECT o_custkey FROM orders WHERE extract(year FROM o_orderdate) = 1997)\n  EXCEPT\n  SELECT o_custkey FROM orders WHERE extract(year FROM o_orderdate) = 1995)\nSELECT c_mktsegment, count(*) AS customer_count\nFROM customer JOIN s ON c_custkey = s.o_custkey\nGROUP BY c_mktsegment\nORDER BY c_mktsegment",
+    "skills": "set operations INTERSECT / EXCEPT",
+    "why_hard": "Three-way set logic over years; easy to invert or to count orders instead of customers."
+  },
+  {
+    "id": "F11",
+    "question": "Return rate by priority. For orders placed in 1993 (on or after 1993-01-01 and before 1994-01-01), compute for each order priority the fraction (between 0 and 1)\nof their line items that have return flag 'R' (number of line items with flag 'R' divided by the number of line items).\nSort by order priority.\nOutput columns: o_orderpriority, return_rate",
+    "gold_sql": "SELECT o_orderpriority, avg(CASE WHEN l_returnflag = 'R' THEN 1.0 ELSE 0.0 END) AS return_rate\nFROM orders JOIN lineitem ON l_orderkey = o_orderkey\nWHERE o_orderdate >= DATE '1993-01-01' AND o_orderdate < DATE '1994-01-01'\nGROUP BY o_orderpriority\nORDER BY o_orderpriority",
+    "skills": "ratio via conditional aggregate",
+    "why_hard": "Easy-moderate; the denominator is line items, not orders."
+  },
+  {
+    "id": "F12",
+    "question": "Order-to-ship lag. For line items of orders placed in 1995 (on or after 1995-01-01 and before 1996-01-01), compute per ship mode the average number of days\nbetween the order date and the line item's ship date (ship date minus order date, in days), as well as the maximum of that value.\nSort by average days descending.\nOutput columns: l_shipmode, avg_days, max_days",
+    "gold_sql": "SELECT l_shipmode, avg(l_shipdate - o_orderdate) AS avg_days, max(l_shipdate - o_orderdate) AS max_days\nFROM orders JOIN lineitem ON l_orderkey = o_orderkey\nWHERE o_orderdate >= DATE '1995-01-01' AND o_orderdate < DATE '1996-01-01'\nGROUP BY l_shipmode\nORDER BY avg_days DESC",
+    "skills": "date arithmetic, join",
+    "why_hard": "Date difference across two tables; filter on order date not ship date."
+  },
+  {
+    "id": "F13",
+    "question": "Late receipts by supplier nation. For suppliers in nations of the 'AMERICA' region, consider their line items shipped in 1996 (on or after 1996-01-01\nand before 1997-01-01). For each supplier nation, report the number of such line items and the percentage (0-100) of them that were received after their commit date\n(receipt date later than commit date).\nSort by percentage descending.\nOutput columns: n_name, line_count, late_pct",
+    "gold_sql": "SELECT n_name, count(*) AS line_count,\n       100.0 * sum(CASE WHEN l_receiptdate > l_commitdate THEN 1 ELSE 0 END) / count(*) AS late_pct\nFROM lineitem JOIN supplier ON l_suppkey = s_suppkey JOIN nation ON s_nationkey = n_nationkey\nJOIN region ON n_regionkey = r_regionkey\nWHERE r_name = 'AMERICA' AND l_shipdate >= DATE '1996-01-01' AND l_shipdate < DATE '1997-01-01'\nGROUP BY n_name\nORDER BY late_pct DESC",
+    "skills": "multi-join, percentage with CASE",
+    "why_hard": "Multi-hop join plus percentage; must group by supplier (not customer) nation."
+  },
+  {
+    "id": "F14",
+    "question": "Top customers per segment. For orders placed in 1995 (on or after 1995-01-01 and before 1996-01-01), compute each customer's total of order total price.\nFor each market segment, report the three customers with the largest totals, with their rank within the segment (1 = largest).\nSort by market segment, then rank.\nOutput columns: c_mktsegment, c_name, total_spent, rnk",
+    "gold_sql": "WITH t AS (\n  SELECT c_mktsegment, c_name, sum(o_totalprice) AS total_spent\n  FROM customer JOIN orders ON o_custkey = c_custkey\n  WHERE o_orderdate >= DATE '1995-01-01' AND o_orderdate < DATE '1996-01-01'\n  GROUP BY c_custkey, c_mktsegment, c_name),\nr AS (SELECT *, rank() OVER (PARTITION BY c_mktsegment ORDER BY total_spent DESC) AS rnk FROM t)\nSELECT c_mktsegment, c_name, total_spent, rnk FROM r WHERE rnk <= 3\nORDER BY c_mktsegment, rnk",
+    "skills": "window RANK partitioned top-N",
+    "why_hard": "Per-group top-N needs a partitioned window; a global LIMIT is wrong."
+  },
+  {
+    "id": "F15",
+    "question": "Monthly revenue with running total. For line items shipped in 1995 (on or after 1995-01-01 and before 1996-01-01), compute revenue (extended price * (1 - discount))\nper ship month (1-12) and the cumulative revenue from January through that month.\nSort by month.\nOutput columns: ship_month, revenue, cumulative_revenue",
+    "gold_sql": "WITH m AS (\n  SELECT extract(month FROM l_shipdate) AS ship_month, sum(l_extendedprice * (1 - l_discount)) AS revenue\n  FROM lineitem WHERE l_shipdate >= DATE '1995-01-01' AND l_shipdate < DATE '1996-01-01'\n  GROUP BY 1)\nSELECT ship_month, revenue, sum(revenue) OVER (ORDER BY ship_month) AS cumulative_revenue\nFROM m ORDER BY ship_month",
+    "skills": "window running SUM",
+    "why_hard": "Running total over an aggregate; moderate."
+  },
+  {
+    "id": "F16",
+    "question": "Cross-region trade matrix. For orders placed in 1996 (on or after 1996-01-01 and before 1997-01-01), compute revenue (extended price * (1 - discount)) for every\ncombination of customer region and supplier region (customer region from the ordering customer's nation, supplier region from the line item supplier's nation).\nSort by customer region, then supplier region.\nOutput columns: cust_region, supp_region, revenue",
+    "gold_sql": "SELECT rc.r_name AS cust_region, rs.r_name AS supp_region, sum(l_extendedprice * (1 - l_discount)) AS revenue\nFROM orders JOIN lineitem ON l_orderkey = o_orderkey\nJOIN customer ON o_custkey = c_custkey JOIN nation nc ON c_nationkey = nc.n_nationkey JOIN region rc ON nc.n_regionkey = rc.r_regionkey\nJOIN supplier ON l_suppkey = s_suppkey JOIN nation ns ON s_nationkey = ns.n_nationkey JOIN region rs ON ns.n_regionkey = rs.r_regionkey\nWHERE o_orderdate >= DATE '1996-01-01' AND o_orderdate < DATE '1997-01-01'\nGROUP BY rc.r_name, rs.r_name\nORDER BY cust_region, supp_region",
+    "skills": "double role-playing joins of nation/region (self-joins)",
+    "why_hard": "Needs nation and region joined twice under aliases; 9 tables in total."
+  },
+  {
+    "id": "F17",
+    "question": "Unusually large automobile orders. For customers in market segment 'AUTOMOBILE', find orders whose total price is more than 1.5 times the average order total price\nof that same customer (average over all of that customer's orders). Report the number of such orders per order year.\nSort by year.\nOutput columns: o_year, order_count",
+    "gold_sql": "SELECT extract(year FROM o.o_orderdate) AS o_year, count(*) AS order_count\nFROM orders o JOIN customer ON o.o_custkey = c_custkey\nWHERE c_mktsegment = 'AUTOMOBILE'\n  AND o.o_totalprice > 1.5 * (SELECT avg(o2.o_totalprice) FROM orders o2 WHERE o2.o_custkey = o.o_custkey)\nGROUP BY 1\nORDER BY 1",
+    "skills": "correlated subquery against per-customer average",
+    "why_hard": "Correlated threshold per customer; the subquery average must not be restricted to the segment-filtered set by mistake (it isn't, but must be per customer)."
+  },
+  {
+    "id": "F18",
+    "question": "Globally sourced parts. A part is 'globally sourced' if its suppliers in partsupp are located in at least 4 different regions. For each manufacturer,\nreport the number of globally sourced parts and the total number of parts from that manufacturer.\nSort by manufacturer.\nOutput columns: p_mfgr, global_parts, total_parts",
+    "gold_sql": "WITH g AS (\n  SELECT ps_partkey FROM partsupp JOIN supplier ON ps_suppkey = s_suppkey JOIN nation ON s_nationkey = n_nationkey\n  GROUP BY ps_partkey HAVING count(DISTINCT n_regionkey) >= 4)\nSELECT p_mfgr, count(g.ps_partkey) AS global_parts, count(*) AS total_parts\nFROM part LEFT JOIN g ON p_partkey = g.ps_partkey\nGROUP BY p_mfgr\nORDER BY p_mfgr",
+    "skills": "HAVING count(DISTINCT), LEFT JOIN for denominator",
+    "why_hard": "Combines a distinct-count HAVING with an outer join so both counts come from one query."
+  },
+  {
+    "id": "F19",
+    "question": "Brand price spread. For each part brand, report the minimum retail price, the maximum retail price, and the spread (maximum minus minimum).\nOnly include brands whose spread is greater than 990.\nSort by spread descending, then brand.\nOutput columns: p_brand, min_price, max_price, spread",
+    "gold_sql": "SELECT p_brand, min(p_retailprice) AS min_price, max(p_retailprice) AS max_price, max(p_retailprice) - min(p_retailprice) AS spread\nFROM part GROUP BY p_brand\nHAVING max(p_retailprice) - min(p_retailprice) > 990\nORDER BY spread DESC, p_brand",
+    "skills": "group by with HAVING on derived aggregate",
+    "why_hard": "Easy."
+  },
+  {
+    "id": "F20",
+    "question": "Runner-up customer by balance. For each nation, find the customer(s) with the second-highest distinct account balance in that nation\n(rank balances with dense ranking, highest = 1, and report rank 2). Report nation name, customer name and account balance.\nSort by nation name, then customer name.\nOutput columns: n_name, c_name, c_acctbal",
+    "gold_sql": "WITH r AS (\n  SELECT n_name, c_name, c_acctbal, dense_rank() OVER (PARTITION BY c_nationkey ORDER BY c_acctbal DESC) AS dr\n  FROM customer JOIN nation ON c_nationkey = n_nationkey)\nSELECT n_name, c_name, c_acctbal FROM r WHERE dr = 2 ORDER BY n_name, c_name",
+    "skills": "window DENSE_RANK, nth-highest per group",
+    "why_hard": "Second-highest per group; needs a partitioned ranking or a nested max-below-max subquery."
+  },
+  {
+    "id": "F21",
+    "question": "Customers who never order urgently. Find customers who have placed at least one order but have never placed an order with order priority '1-URGENT'.\nReport, per market segment, the number of such customers and the sum of their account balances.\nSort by market segment.\nOutput columns: c_mktsegment, customer_count, total_acctbal",
+    "gold_sql": "SELECT c_mktsegment, count(*) AS customer_count, sum(c_acctbal) AS total_acctbal\nFROM customer\nWHERE EXISTS (SELECT 1 FROM orders WHERE o_custkey = c_custkey)\n  AND NOT EXISTS (SELECT 1 FROM orders WHERE o_custkey = c_custkey AND o_orderpriority = '1-URGENT')\nGROUP BY c_mktsegment\nORDER BY c_mktsegment",
+    "skills": "EXISTS + NOT EXISTS (universal quantification)",
+    "why_hard": "Must also require at least one order; forgetting EXISTS includes the ~500 customers with no orders."
+  },
+  {
+    "id": "F22",
+    "question": "Repeat part purchases. A repeat purchase is a (customer, part) pair where the customer bought that part in at least two different orders.\nFor each customer market segment, report the number of distinct customers with at least one repeat purchase and the number of repeat (customer, part) pairs.\nSort by market segment.\nOutput columns: c_mktsegment, customer_count, pair_count",
+    "gold_sql": "WITH p AS (\n  SELECT o_custkey, l_partkey FROM orders JOIN lineitem ON l_orderkey = o_orderkey\n  GROUP BY o_custkey, l_partkey HAVING count(DISTINCT o_orderkey) >= 2)\nSELECT c_mktsegment, count(DISTINCT o_custkey) AS customer_count, count(*) AS pair_count\nFROM p JOIN customer ON c_custkey = o_custkey\nGROUP BY c_mktsegment\nORDER BY c_mktsegment",
+    "skills": "two-level aggregation, count DISTINCT",
+    "why_hard": "Must count distinct orders per pair (not line items) and then aggregate at two granularities."
+  },
+  {
+    "id": "F23",
+    "question": "Gross margin by product family. The product family of a part is the first word of its type (e.g. 'PROMO' for 'PROMO BRUSHED COPPER').\nFor line items shipped in 1997 (on or after 1997-01-01 and before 1998-01-01), compute per product family the revenue (sum of extended price * (1 - discount)),\nthe cost (sum of the line item supplier's partsupp supply cost for that part times quantity), and the margin ratio (revenue - cost) / revenue.\nSort by margin ratio descending.\nOutput columns: family, revenue, cost, margin",
+    "gold_sql": "SELECT split_part(p_type, ' ', 1) AS family,\n       sum(l_extendedprice * (1 - l_discount)) AS revenue,\n       sum(ps_supplycost * l_quantity) AS cost,\n       (sum(l_extendedprice * (1 - l_discount)) - sum(ps_supplycost * l_quantity)) / sum(l_extendedprice * (1 - l_discount)) AS margin\nFROM lineitem JOIN part ON l_partkey = p_partkey\nJOIN partsupp ON ps_partkey = l_partkey AND ps_suppkey = l_suppkey\nWHERE l_shipdate >= DATE '1997-01-01' AND l_shipdate < DATE '1998-01-01'\nGROUP BY 1\nORDER BY margin DESC",
+    "skills": "string function grouping, composite-key join to partsupp, ratio",
+    "why_hard": "Join to partsupp must use both part and supplier keys; family derived via string split."
+  },
+  {
+    "id": "F24",
+    "question": "Fully domestic orders. An order is fully domestic if every one of its line items was supplied by a supplier located in the same nation as the ordering customer.\nFor each customer region, report the number of fully domestic orders and their total of order total price.\nSort by region name.\nOutput columns: r_name, order_count, total_price",
+    "gold_sql": "SELECT r_name, count(*) AS order_count, sum(o_totalprice) AS total_price\nFROM orders JOIN customer ON o_custkey = c_custkey JOIN nation ON c_nationkey = n_nationkey JOIN region ON n_regionkey = r_regionkey\nWHERE NOT EXISTS (\n  SELECT 1 FROM lineitem JOIN supplier ON l_suppkey = s_suppkey\n  WHERE l_orderkey = o_orderkey AND s_nationkey <> c_nationkey)\n  AND EXISTS (SELECT 1 FROM lineitem WHERE l_orderkey = o_orderkey)\nGROUP BY r_name\nORDER BY r_name",
+    "skills": "correlated NOT EXISTS, universal condition",
+    "why_hard": "'Every line item' requires NOT EXISTS of a counterexample; a plain join counts orders with any domestic line."
+  },
+  {
+    "id": "F25",
+    "question": "Asian revenue share. For orders placed in 1995 (on or after 1995-01-01 and before 1996-01-01) by customers in nations of the 'ASIA' region, compute\neach customer nation's revenue (extended price * (1 - discount)) and its share of the total Asian revenue as a percentage (0-100).\nSort by share descending.\nOutput columns: n_name, revenue, share_pct",
+    "gold_sql": "WITH n AS (\n  SELECT n_name, sum(l_extendedprice * (1 - l_discount)) AS revenue\n  FROM orders JOIN lineitem ON l_orderkey = o_orderkey JOIN customer ON o_custkey = c_custkey\n  JOIN nation ON c_nationkey = n_nationkey JOIN region ON n_regionkey = r_regionkey\n  WHERE r_name = 'ASIA' AND o_orderdate >= DATE '1995-01-01' AND o_orderdate < DATE '1996-01-01'\n  GROUP BY n_name)\nSELECT n_name, revenue, 100 * revenue / sum(revenue) OVER () AS share_pct FROM n ORDER BY share_pct DESC",
+    "skills": "window SUM OVER () for percent of total",
+    "why_hard": "Percent-of-total over grouped data; moderate."
+  },
+  {
+    "id": "F26",
+    "question": "Busiest urgent clerks. For orders placed in 1994 (on or after 1994-01-01 and before 1995-01-01) with order priority '1-URGENT', find the clerk(s) who handled the\nlargest number of such orders. If several clerks tie for the maximum, report all of them.\nSort by clerk.\nOutput columns: o_clerk, order_count",
+    "gold_sql": "WITH c AS (\n  SELECT o_clerk, count(*) AS order_count FROM orders\n  WHERE o_orderpriority = '1-URGENT' AND o_orderdate >= DATE '1994-01-01' AND o_orderdate < DATE '1995-01-01'\n  GROUP BY o_clerk)\nSELECT o_clerk, order_count FROM c WHERE order_count = (SELECT max(order_count) FROM c) ORDER BY o_clerk",
+    "skills": "argmax with ties",
+    "why_hard": "Several clerks tie for the maximum; LIMIT 1 returns the wrong row count."
+  },
+  {
+    "id": "F27",
+    "question": "Transit time buckets. For line items shipped in 1994 (on or after 1994-01-01 and before 1995-01-01), let transit days be the receipt date minus the ship date (in days).\nBucket them as '01-07' (1 to 7 days), '08-14' (8 to 14), '15-21' (15 to 21) and '22-30' (22 to 30). For each bucket report the number of line items and\nthe average discount.\nSort by bucket.\nOutput columns: bucket, line_count, avg_discount",
+    "gold_sql": "SELECT CASE WHEN l_receiptdate - l_shipdate <= 7 THEN '01-07'\n            WHEN l_receiptdate - l_shipdate <= 14 THEN '08-14'\n            WHEN l_receiptdate - l_shipdate <= 21 THEN '15-21'\n            ELSE '22-30' END AS bucket,\n       count(*) AS line_count, avg(l_discount) AS avg_discount\nFROM lineitem\nWHERE l_shipdate >= DATE '1994-01-01' AND l_shipdate < DATE '1995-01-01'\nGROUP BY 1 ORDER BY 1",
+    "skills": "CASE bucketing on date difference",
+    "why_hard": "Bucket boundaries must be inclusive exactly as stated."
+  },
+  {
+    "id": "F28",
+    "question": "Suppliers with worldwide reach. Find the suppliers who, for orders placed in 1995 (on or after 1995-01-01 and before 1996-01-01), supplied\nat least one line item to customers in every one of the 25 nations. Report supplier name and the number of line items they supplied on 1995 orders.\nSort by supplier name.\nOutput columns: s_name, line_count",
+    "gold_sql": "SELECT s_name, count(*) AS line_count\nFROM lineitem JOIN orders ON l_orderkey = o_orderkey JOIN customer ON o_custkey = c_custkey\nJOIN supplier ON l_suppkey = s_suppkey\nWHERE o_orderdate >= DATE '1995-01-01' AND o_orderdate < DATE '1996-01-01'\nGROUP BY s_suppkey, s_name\nHAVING count(DISTINCT c_nationkey) = (SELECT count(*) FROM nation)\nORDER BY s_name",
+    "skills": "relational division via HAVING count(DISTINCT) = total",
+    "why_hard": "Relational division ('every nation'); the line count must cover all of the supplier's 1995 line items, not only one per nation."
+  },
+  {
+    "id": "F29",
+    "question": "Average reorder gap. For each customer with at least two orders, sort that customer's orders by order date and compute the gap in days between each order\nand the same customer's previous order. Report, per market segment, the average of all these gaps (pooled over all gaps of all customers in the segment)\nand the number of gaps.\nSort by market segment.\nOutput columns: c_mktsegment, avg_gap_days, gap_count",
+    "gold_sql": "WITH g AS (\n  SELECT o_custkey, o_orderdate - lag(o_orderdate) OVER (PARTITION BY o_custkey ORDER BY o_orderdate) AS gap FROM orders)\nSELECT c_mktsegment, avg(gap) AS avg_gap_days, count(gap) AS gap_count\nFROM g JOIN customer ON c_custkey = o_custkey\nWHERE gap IS NOT NULL\nGROUP BY c_mktsegment ORDER BY c_mktsegment",
+    "skills": "window LAG partitioned by customer, date difference",
+    "why_hard": "Partitioned LAG over dates and pooling gaps rather than averaging per-customer averages."
+  },
+  {
+    "id": "F30",
+    "question": "Top-selling parts of 1996. For line items shipped in 1996 (on or after 1996-01-01 and before 1997-01-01), compute the total quantity shipped per part.\nReport the 10 parts with the largest total quantity.\nSort by total quantity descending, then part key. Return the top 10 rows.\nOutput columns: p_partkey, p_name, total_qty",
+    "gold_sql": "SELECT p_partkey, p_name, sum(l_quantity) AS total_qty\nFROM lineitem JOIN part ON l_partkey = p_partkey\nWHERE l_shipdate >= DATE '1996-01-01' AND l_shipdate < DATE '1997-01-01'\nGROUP BY p_partkey, p_name\nORDER BY total_qty DESC, p_partkey\nLIMIT 10",
+    "skills": "join, aggregate, ORDER BY ... LIMIT",
+    "why_hard": "Easy top-N."
+  }
+]

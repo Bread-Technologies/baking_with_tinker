@@ -183,7 +183,8 @@ def make_generator(args):
 
         renderer_name = args.renderer or model_info.get_recommended_renderer_name(args.model)
         renderer = renderers.get_renderer(renderer_name, get_tokenizer(args.model))
-        client = tinker.ServiceClient().create_sampling_client(base_model=args.model)
+        model_path = getattr(args, "model_path", None)
+        client = tinker.ServiceClient().create_sampling_client(base_model=args.model, model_path=model_path)
         params = tinker.types.SamplingParams(
             max_tokens=args.max_tokens, temperature=getattr(args, "temperature", 0.0),
             top_p=getattr(args, "top_p", 1.0), stop=renderer.get_stop_sequences()
@@ -244,6 +245,7 @@ def main():
     ap.add_argument("--api-key", help="openai backend: API key, if the server needs one")
     ap.add_argument("--responses", help="file backend: JSON mapping question number to response text")
     ap.add_argument("--dump-prompts", help="write {question number: full prompt} JSON here and exit")
+    ap.add_argument("--model-path", help="tinker backend: tinker:// sampler checkpoint to evaluate")
     ap.add_argument("--renderer", help="tinker backend: override the recommended renderer")
     ap.add_argument("--sf", type=float, default=0.01, help="TPC-H scale factor")
     ap.add_argument("--thinking", choices=["on", "off"], help="openai backend: force thinking on/off (vLLM)")
