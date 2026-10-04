@@ -100,3 +100,22 @@ target_dev (150 × 2 samples, t=1.0), updated as checkpoints land. Base model: 5
 ## Sweep B (prime-rl on Modal, 1×H100 per run with vLLM and trainer on the same GPU, 200 steps)
 
 b01: 2B mix lr 2e-4 · b02: 2B mix lr 5e-4 r128 · b03: 2B mix lr 1e-4 · b04: 2B target lr 2e-4 · b05: 0.8B mix lr 2e-4. Eval: target_dev every 25 steps.
+
+### Stall analysis: target_dev failures, s03 step 100 (90.3%)
+
+There are 29 failures out of 300 attempts. 8 questions fail both samples and 13 fail one.
+
+Of the 8 systematic failures, about 5 are real student errors:
+- `EXTRACT(MONTH)` used where calendar months were needed
+- a filter dropped in a LEFT JOIN
+- the wrong CTE column referenced
+- an average taken over the wrong set
+
+About 3 are **flawed dev items**:
+- a question asks for 4 values but lists 3 output columns
+- "1995" doesn't say whether it means the order date or the ship date
+- an ambiguous "distinct parts" ranking
+
+So target_dev's ceiling is under 100%, and the 88–91% plateau is partly that ceiling. Configs separated by less than about 3 points can't be told apart on it.
+
+**Decision:** use the test sets (TPC-H 22, fresh, probes) only at the final checkpoints chosen in advance (step 200 for sweep S), and judge sweep S by those plus target_dev. Don't fix dev items by reading test failures. The ambiguous dev items can be dropped from target_dev, but that changes only the dev metric, never training.
