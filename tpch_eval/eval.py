@@ -37,6 +37,7 @@ import duckdb
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent))
+from prompting import SYSTEM_PROMPT, build_prompt  # noqa: E402
 from questions import QUESTIONS  # noqa: E402
 
 ROOT = Path(__file__).parent
@@ -44,12 +45,6 @@ REPO = ROOT.parent
 load_dotenv(REPO / "care package" / ".env")
 
 TABLES = ["region", "nation", "supplier", "customer", "part", "partsupp", "orders", "lineitem"]
-
-SYSTEM_PROMPT = (
-    "You are an expert SQL analyst. You write a single DuckDB SQL query that answers the "
-    "user's question against the TPC-H schema. Return exactly the requested output columns, "
-    "in the requested order. Reply with only the SQL query inside a ```sql code block."
-)
 
 QUERY_TIMEOUT_S = 60
 
@@ -169,7 +164,8 @@ def make_generator(args):
             resp = client.chat.completions.create(
                 model=args.model,
                 max_tokens=args.max_tokens,
-                temperature=0.0,
+                temperature=getattr(args, "temperature", 0.0),
+                top_p=getattr(args, "top_p", 1.0),
                 messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
                 **extra,
             )
@@ -189,7 +185,8 @@ def make_generator(args):
         renderer = renderers.get_renderer(renderer_name, get_tokenizer(args.model))
         client = tinker.ServiceClient().create_sampling_client(base_model=args.model)
         params = tinker.types.SamplingParams(
-            max_tokens=args.max_tokens, temperature=0.0, stop=renderer.get_stop_sequences()
+            max_tokens=args.max_tokens, temperature=getattr(args, "temperature", 0.0),
+            top_p=getattr(args, "top_p", 1.0), stop=renderer.get_stop_sequences()
         )
         print(f"tinker renderer: {renderer_name}")
 
@@ -251,6 +248,9 @@ def main():
     ap.add_argument("--sf", type=float, default=0.01, help="TPC-H scale factor")
     ap.add_argument("--thinking", choices=["on", "off"], help="openai backend: force thinking on/off (vLLM)")
     ap.add_argument("--tag", default="", help="suffix for the results filename")
+    ap.add_argument("--temperature", type=float, default=0.0)
+    ap.add_argument("--top-p", type=float, default=1.0)
+    ap.add_argument("--samples", type=int, default=1, help="attempts per question; score is the mean")
     ap.add_argument("--concurrency", type=int, default=1, help="parallel generation requests")
     ap.add_argument("--max-tokens", type=int, default=4096)
     ap.add_argument("--queries", default="1-22", help="e.g. 1-22 or 1,3,5")
@@ -265,13 +265,13 @@ def main():
     con = connect(ensure_data(args.sf))
     schema = schema_text(con)
     if args.dump_prompts:
-        prompts = {q: f"Schema:\n\n{schema}\n\nQuestion:\n{QUESTIONS[q]}" for q in qids}
+        prompts = {q: build_prompt(schema, QUESTIONS[q]) for q in qids}
         Path(args.dump_prompts).write_text(json.dumps({"system": SYSTEM_PROMPT, "prompts": prompts}, indent=2))
         print(f"wrote {len(prompts)} prompts to {args.dump_prompts}")
         return
     gen = make_generator(args)
 
-    prompts = {q: f"Schema:\n\n{schema}\n\nQuestion:\n{QUESTIONS[q]}" for q in qids}
+    prompts = {q: build_prompt(schema, QUESTIONS[q]) for q in qids}
 
     def generate(q):
         try:
@@ -282,33 +282,42 @@ def main():
     # Generation can run in parallel (servers batch requests); scoring stays sequential on one connection.
     from concurrent.futures import ThreadPoolExecutor
 
+    jobs = [(q, k) for k in range(args.samples) for q in qids]
     with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        generated = dict(zip(qids, pool.map(generate, qids)))
+        generated = dict(zip(jobs, pool.map(lambda job: generate(job[0]), jobs)))
 
+    golds = {q: run_sql(con, (ROOT / "reference" / f"q{q:02d}.sql").read_text()) for q in qids}
     results = []
-    for q in qids:
-        gold = run_sql(con, (ROOT / "reference" / f"q{q:02d}.sql").read_text())
-        response, err = generated[q]
+    for q, k in jobs:
+        response, err = generated[(q, k)]
         if err:
             sql, ok, why = "", False, err
         else:
             sql = extract_sql(response)
             try:
-                ok, why = results_match(run_sql(con, sql), gold)
+                ok, why = results_match(run_sql(con, sql), golds[q])
             except Exception as e:  # noqa: BLE001
                 ok, why = False, f"sql error: {str(e).splitlines()[0][:200]}"
-        results.append({"q": q, "correct": ok, "reason": why, "sql": sql, "response": response})
-        print(f"Q{q:02d} {'PASS' if ok else 'FAIL'}  {'' if ok else why}", flush=True)
+        results.append({"q": q, "sample": k, "correct": ok, "reason": why, "sql": sql, "response": response})
 
-    score = sum(r["correct"] for r in results)
-    print(f"\n{args.model}: {score}/{len(results)}")
+    per_q = {q: [r["correct"] for r in results if r["q"] == q] for q in qids}
+    for q in qids:
+        first = next(r for r in results if r["q"] == q)
+        rate = sum(per_q[q]) / len(per_q[q])
+        print(f"Q{q:02d} {rate:4.0%} {'' if rate == 1 else first['reason'][:120]}", flush=True)
+    # score = expected number of questions solved per attempt (mean over samples), out of len(qids)
+    per_sample = [sum(r["correct"] for r in results if r["sample"] == k) for k in range(args.samples)]
+    score = sum(per_sample) / args.samples
+    lo, hi = min(per_sample), max(per_sample)
+    print(f"\n{args.model}: {score:.2f}/{len(qids)} mean over {args.samples} sample(s) (range {lo}-{hi})")
 
     out_dir = ROOT / "results"
     out_dir.mkdir(exist_ok=True)
     out = out_dir / f"{args.backend}__{args.model.replace('/', '_')}{args.tag}.json"
     out.write_text(json.dumps({"model": args.model, "backend": args.backend, "sf": args.sf,
                                "thinking": args.thinking, "max_tokens": args.max_tokens,
-                               "score": score, "total": len(results), "results": results}, indent=2))
+                               "temperature": args.temperature, "top_p": args.top_p, "samples": args.samples,
+                               "score": score, "per_sample": per_sample, "total": len(qids), "results": results}, indent=2))
     print(f"wrote {out}")
 
 
