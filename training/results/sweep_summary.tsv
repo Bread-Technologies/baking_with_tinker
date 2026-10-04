@@ -7,3 +7,5 @@ s02_mix_lr1e-3	25	0.793	0.046	300	tinker://caea31b1-21f3-57f7-aa62-3abc830e96da:
 s01_mix_lr5e-4	25	0.833	0.042	300	tinker://70364a9e-a648-55f0-9ab6-3776ac51747c:train:0/sampler_weights/000025
 s07_mix_lr5e-4_r128	25	0.880	0.037	300	tinker://65a498c5-873c-505b-8e17-f40fdd50163e:train:0/sampler_weights/000025
 s05_proxy_lr5e-4	50	0.550	0.056	300	tinker://72e08530-edd2-526f-a173-ab031bbdf948:train:0/sampler_weights/000050
+s03_mix_lr2e-4	50	0.870	0.038	300	tinker://499f1fc8-9c10-530d-a58e-ccffdf1b7c8f:train:0/sampler_weights/000050
+s06_mix_lr5e-4_tok8k	50	0.823	0.043	300	tinker://cb537060-02c7-55a7-b789-064b486e376f:train:0/sampler_weights/000050
