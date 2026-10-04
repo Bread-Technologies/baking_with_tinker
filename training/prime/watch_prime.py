@@ -24,9 +24,11 @@ def orchestrator_log(run: str) -> str:
     if run not in _where:
         for c in _containers():
             found = subprocess.run(["modal", "container", "exec", c, "--", "find", f"/outputs/{run}", "-name",
-                                    "orchestrator.log"], capture_output=True, text=True, timeout=90).stdout.split()
+                                    "orchestrator.log", "-printf", "%T@ %p\n"],
+                                   capture_output=True, text=True, timeout=90).stdout.split("\n")
+            found = sorted((float(t), p) for t, _, p in (line.partition(" ") for line in found if line.strip()))
             if found:
-                _where[run] = (c, found[0])
+                _where[run] = (c, found[-1][1])  # newest log: earlier attempts leave old run dirs behind
                 break
     if run not in _where:
         return ""
