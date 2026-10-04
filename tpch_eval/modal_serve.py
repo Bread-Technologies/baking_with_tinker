@@ -17,13 +17,16 @@ import modal
 MODEL = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-Coder-1.5B-Instruct")
 
 image = (
-    modal.Image.debian_slim(python_version="3.12")
-    .pip_install("vllm", "huggingface_hub[hf_transfer]")
+    # vLLM's official image: pip-installing vllm on debian_slim tries to compile deps without CUDA.
+    modal.Image.from_registry("vllm/vllm-openai:latest", add_python=None)
+    .entrypoint([])
+    .dockerfile_commands(["RUN ln -sf $(which python3) /usr/local/bin/python"])  # Modal expects `python`
+    .pip_install("hf_transfer")
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1", "MODEL_NAME": MODEL})
 )
 hf_cache = modal.Volume.from_name("hf-cache", create_if_missing=True)
 
-app = modal.App("tpch-qwen-coder")
+app = modal.App(os.environ.get("MODAL_APP_NAME", "tpch-qwen-coder"))
 
 
 @app.function(
@@ -37,5 +40,5 @@ app = modal.App("tpch-qwen-coder")
 @modal.web_server(port=8000, startup_timeout=10 * 60)
 def serve():
     subprocess.Popen(
-        ["vllm", "serve", MODEL, "--host", "0.0.0.0", "--port", "8000", "--max-model-len", "16384"]
+        ["vllm", "serve", MODEL, "--host", "0.0.0.0", "--port", "8000", "--max-model-len", "32768"]
     )
