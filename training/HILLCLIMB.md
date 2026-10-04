@@ -251,3 +251,10 @@ b01 (mix) step 160: TPC-H mean 13.38, vote 17/22; fresh mean 19.06, vote 24/30; 
 | E exact only | 14.94 (17) | 9.56 (12) | 11.69 (15) | 60.7% |
 
 Fresh rises at every point, so part of each gain may come from the extra 20 steps rather than from the dial data. I added a clean control, dial_0p8b_clean (same branch and steps, mix_train only), so each point can be compared at a matched step.
+
+Eval infra bug: the variants and exactonly step-190 evals scored 0 everywhere, with 404 "model does not exist". The container had been reused and was still running the previous call's vLLM server, so the new LoRA was never loaded. Fix: max_inputs=1, which gives every eval a fresh container. I removed those lines and respawned the two evals. Any nonzero result is unaffected, because a wrong server returns 404s, not wrong scores.
+
+Noise estimate: dial_exact step 170 was evaluated twice and gave TPC-H mean 11.69 and 10.94. So single-sample means move about ±0.5, and votes about ±2.
+
+- b01 step 180: TPC-H mean 12.06 (vote 13), fresh 14.88 (18), probes 10.69 (14), Spider 78.3%. Down from step 160, so the run looks past its peak.
+- dial_exact step 190: TPC-H 13.94 (16), fresh 10.00 (12), probes 10.56 (14), Spider 66.0%.

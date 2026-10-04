@@ -46,7 +46,7 @@ def _parse(log: str, kind: str) -> str:
     return (m.group(1) if m else "FAILED") + (f" | {v.group(0)}" if v else "")
 
 
-@app.function(image=image, gpu="H100", volumes=VOLS, timeout=4 * 3600)
+@app.function(image=image, gpu="H100", volumes=VOLS, timeout=4 * 3600, max_inputs=1)  # fresh container per eval: a reused one still runs the previous vLLM
 def eval_lora(run: str, base: str, step: int, eval_args: str = "--samples 16 --retries 2", spider: int = 0,
               sets: tuple = ("tpch", "fresh", "probe")) -> list[str]:
     import os

@@ -82,3 +82,15 @@ dial_0p8b_paraphrase step170 tpch: 8.75/22 mean over 16 sample(s) (range 6-13) |
 dial_0p8b_paraphrase step170 fresh: 9.69/30 mean over 16 sample(s) (range 7-12) | majority-vote@16 13/30
 dial_0p8b_paraphrase step170 probe: 7.06/22 mean over 16 sample(s) (range 5-10) | majority-vote@16 9/22
 dial_0p8b_paraphrase step170 spider_test: 206/300 = 0.687 ± 0.052
+b01_2b_mix_lr2e-4 step180 tpch: 12.06/22 mean over 16 sample(s) (range 10-16) | majority-vote@16 13/22
+b01_2b_mix_lr2e-4 step180 fresh: 14.88/30 mean over 16 sample(s) (range 11-18) | majority-vote@16 18/30
+b01_2b_mix_lr2e-4 step180 probe: 10.69/22 mean over 16 sample(s) (range 8-14) | majority-vote@16 14/22
+b01_2b_mix_lr2e-4 step180 spider_test: 235/300 = 0.783 ± 0.047
+dial_0p8b_exact step170 tpch: 10.94/22 mean over 16 sample(s) (range 10-13) | majority-vote@16 13/22
+dial_0p8b_exact step170 fresh: 9.69/30 mean over 16 sample(s) (range 6-12) | majority-vote@16 12/30
+dial_0p8b_exact step170 probe: 8.00/22 mean over 16 sample(s) (range 5-10) | majority-vote@16 12/22
+dial_0p8b_exact step170 spider_test: 200/300 = 0.667 ± 0.053
+dial_0p8b_exact step190 tpch: 13.94/22 mean over 16 sample(s) (range 12-16) | majority-vote@16 16/22
+dial_0p8b_exact step190 fresh: 10.00/30 mean over 16 sample(s) (range 8-12) | majority-vote@16 12/30
+dial_0p8b_exact step190 probe: 10.56/22 mean over 16 sample(s) (range 7-13) | majority-vote@16 14/22
+dial_0p8b_exact step190 spider_test: 198/300 = 0.660 ± 0.054
