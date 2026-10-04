@@ -11,7 +11,15 @@ python tpch_eval/eval.py --backend tinker --model Qwen/Qwen3.5-397B-A17B
 python tpch_eval/eval.py --backend claude --model claude-opus-5-5
 modal deploy tpch_eval/modal_serve.py                                        # Qwen2.5-Coder-1.5B-Instruct on vLLM
 python tpch_eval/eval.py --backend openai --model Qwen/Qwen2.5-Coder-1.5B-Instruct --base-url https://<ws>--tpch-qwen-coder-serve.modal.run/v1
-python tpch_eval/eval.py --backend hf     --model Qwen/Qwen2.5-Coder-1.5B-Instruct --max-tokens 1024  # local CPU; Modal's gRPC client cannot get through this sandbox's proxy
+python tpch_eval/eval.py --backend hf     --model Qwen/Qwen2.5-Coder-1.5B-Instruct --max-tokens 1024  # local CPU alternative to Modal
 ```
 
 Per-query SQL, responses and failure reasons are written to `tpch_eval/results/`.
+
+## Modal behind an HTTP proxy
+
+In Claude Code cloud sessions all traffic goes through an HTTPS proxy. Modal's gRPC client works through it, but only with the optional proxy extra installed. Without it, every command fails with "Could not connect to the Modal server".
+
+```bash
+pip install 'modal[api-proxy-support]'
+```
