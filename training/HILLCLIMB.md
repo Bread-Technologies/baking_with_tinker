@@ -217,3 +217,14 @@ All four runs branch off b05 step 150 (clean; TPC-H vote 10/22). Each trains 60 
 | C | mix + paraphrases of the 22, same meaning | 170 ×9 |
 | D | mix + the exact 22 prompts | 22 ×68 |
 | E | the exact 22 prompts only | 22 |
+
+**2B, mix vs hard_mix (16 samples + 2 repairs; single-sample mean, with vote@16 in parentheses):**
+
+| run / step | TPC-H | fresh | probes | Spider test |
+|---|---|---|---|---|
+| b01 mix 120 | 12.81 (18) | 17.69 (21) | 11.19 (15) | 80.7% |
+| b01 mix 140 | 12.56 (17) | 17.00 (21) | 11.12 (15) | 79.0% |
+| b07 hard_mix 130 | 14.19 (14) | 18.25 (21) | 11.75 (15) | 80.0% |
+| b07 hard_mix 140 | 13.50 (16) | 17.25 (23) | 12.75 (16) | 80.0% |
+
+hard_mix raises the single-sample mean by about 1 TPC-H point at matched steps, with no loss on Spider. The vote counts are noisy at this size (±2).
