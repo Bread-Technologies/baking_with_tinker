@@ -146,3 +146,9 @@ So target_dev's ceiling is under 100%, and the 88–91% plateau is partly that c
 | 4B s06 final | 16.0 | 23.0 | 16.0 | |
 
 Under the same sampling the teacher is perfect, so 22/22 is reachable. The student **under-thinks on hard questions**: its p90 response length is about a third of the teacher's. Reverse KL is mode-seeking, and the training prompts are mostly easy, single-skill questions where the teacher's mode is a short answer, so the student never practices long reasoning. Next lever: harder multi-skill prompts (generating now), where the teacher reasons at length.
+
+### Cost cut (user flagged Tinker spend)
+- Stopped the remaining 4B sweep runs (s01, s05, s07, s08, s09), the auto-evaluator and its in-flight evals, and hard-question generation (which made 3 thinking calls to the 397B per question).
+- Cut sweep B from 6 Modal runs to 2: **b01** (2B, mix, lr 2e-4: the best 4B recipe) and **b05** (0.8B). Every Modal run also pays for 397B teacher scoring on Tinker at every step.
+- What sweep S settled: lr 2e-4 to 5e-4 and the mix/target data all plateau at about 17–18/22 on TPC-H, and more steps, rank or rollout length don't move it. The remaining lever is *what* the student practices (harder prompts that need long reasoning), not more of the same training.
+- From now on, run one experiment at a time with a stated hypothesis; score dev with 1 sample (not 2) and only at chosen steps; run the 4-sample test sets on final checkpoints only.
