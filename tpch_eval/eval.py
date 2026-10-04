@@ -229,7 +229,11 @@ def make_generator(args):
 
     if args.backend == "gold":
         # Sanity check: answer each question with its reference SQL (should score 22/22).
-        refs = {QUESTIONS[q]: (ROOT / "reference" / f"q{q:02d}.sql").read_text() for q in QUESTIONS}
+        if getattr(args, "set", "tpch") == "tpch":
+            refs = {QUESTIONS[q]: (ROOT / "reference" / f"q{q:02d}.sql").read_text() for q in QUESTIONS}
+        else:
+            items = json.loads((ROOT / "fresh" / f"{args.set}_questions.json").read_text())
+            refs = {it["question"]: it["gold_sql"] for it in items}
         return lambda prompt: "```sql\n" + refs[prompt.split("Question:\n", 1)[1]] + "```"
 
     raise ValueError(args.backend)
@@ -255,25 +259,35 @@ def main():
     ap.add_argument("--samples", type=int, default=1, help="attempts per question; score is the mean")
     ap.add_argument("--concurrency", type=int, default=1, help="parallel generation requests")
     ap.add_argument("--max-tokens", type=int, default=4096)
+    ap.add_argument("--set", default="tpch", choices=["tpch", "fresh", "probe"], help="question set")
     ap.add_argument("--queries", default="1-22", help="e.g. 1-22 or 1,3,5")
     args = ap.parse_args()
 
-    if "-" in args.queries:
-        lo, hi = map(int, args.queries.split("-"))
-        qids = list(range(lo, hi + 1))
+    # Question set: the 22 standard queries, or the fresh / probe test sets (tpch_eval/fresh/).
+    if args.set == "tpch":
+        questions = QUESTIONS
+        gold_sql = {q: (ROOT / "reference" / f"q{q:02d}.sql").read_text() for q in QUESTIONS}
+        if "-" in args.queries:
+            lo, hi = map(int, args.queries.split("-"))
+            qids = list(range(lo, hi + 1))
+        else:
+            qids = [int(q) for q in args.queries.split(",")]
     else:
-        qids = [int(q) for q in args.queries.split(",")]
+        items = json.loads((ROOT / "fresh" / f"{args.set}_questions.json").read_text())
+        questions = {it["id"]: it["question"] for it in items}
+        gold_sql = {it["id"]: it["gold_sql"] for it in items}
+        qids = list(questions)
 
     con = connect(ensure_data(args.sf))
     schema = schema_text(con)
     if args.dump_prompts:
-        prompts = {q: build_prompt(schema, QUESTIONS[q]) for q in qids}
+        prompts = {q: build_prompt(schema, questions[q]) for q in qids}
         Path(args.dump_prompts).write_text(json.dumps({"system": SYSTEM_PROMPT, "prompts": prompts}, indent=2))
         print(f"wrote {len(prompts)} prompts to {args.dump_prompts}")
         return
     gen = make_generator(args)
 
-    prompts = {q: build_prompt(schema, QUESTIONS[q]) for q in qids}
+    prompts = {q: build_prompt(schema, questions[q]) for q in qids}
 
     def generate(q):
         try:
@@ -288,7 +302,7 @@ def main():
     with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         generated = dict(zip(jobs, pool.map(lambda job: generate(job[0]), jobs)))
 
-    golds = {q: run_sql(con, (ROOT / "reference" / f"q{q:02d}.sql").read_text()) for q in qids}
+    golds = {q: run_sql(con, gold_sql[q]) for q in qids}
     results = []
     for q, k in jobs:
         response, err = generated[(q, k)]
@@ -306,7 +320,7 @@ def main():
     for q in qids:
         first = next(r for r in results if r["q"] == q)
         rate = sum(per_q[q]) / len(per_q[q])
-        print(f"Q{q:02d} {rate:4.0%} {'' if rate == 1 else first['reason'][:120]}", flush=True)
+        print(f"{q if isinstance(q, str) else f'Q{q:02d}'} {rate:4.0%} {'' if rate == 1 else first['reason'][:120]}", flush=True)
     # score = expected number of questions solved per attempt (mean over samples), out of len(qids)
     per_sample = [sum(r["correct"] for r in results if r["sample"] == k) for k in range(args.samples)]
     score = sum(per_sample) / args.samples
@@ -315,11 +329,12 @@ def main():
 
     out_dir = ROOT / "results"
     out_dir.mkdir(exist_ok=True)
-    out = out_dir / f"{args.backend}__{args.model.replace('/', '_')}{args.tag}.json"
+    prefix = "" if args.set == "tpch" else f"{args.set}__"
+    out = out_dir / f"{prefix}{args.backend}__{args.model.replace('/', '_')}{args.tag}.json"
     out.write_text(json.dumps({"model": args.model, "backend": args.backend, "sf": args.sf,
                                "thinking": args.thinking, "max_tokens": args.max_tokens,
                                "temperature": args.temperature, "top_p": args.top_p, "samples": args.samples,
-                               "score": score, "per_sample": per_sample, "total": len(qids), "results": results}, indent=2))
+                               "set": args.set, "score": score, "per_sample": per_sample, "total": len(qids), "results": results}, indent=2))
     print(f"wrote {out}")
 
 

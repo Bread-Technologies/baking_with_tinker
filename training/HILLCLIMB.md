@@ -38,6 +38,7 @@ having trained on the test, with an honest account of how well it generalizes.
 |---|---|---|
 | Qwen3.5-397B-A17B (teacher) | thinking, greedy | 22/22 |
 | Claude Opus 5.5 (subagent) | closed-book | 21/22 |
+| Qwen3.5-4B | thinking, t=1.0 ×4 | 11.5/22 (11–13) |
 | Qwen3.5-4B | thinking, t=0.6 ×4 | 12.5/22 (11–14); Spider dev 74.7% (n=300, t=0.6), 73.7% ±5.0 (t=1.0) |
 | Qwen3-8B | thinking, greedy | 15/22 |
 | Qwen2.5-Coder-1.5B-Instruct | greedy | 4/22 |
@@ -50,3 +51,6 @@ having trained on the test, with an honest account of how well it generalizes.
 
 | # | Track | Change | Dev (Spider) | Train metric | Decision | LoRA path |
 |---|---|---|---|---|---|---|
+| P1 | proxy | **Tinker pilot**: Qwen3.5-4B, 40 steps, 32 prompts × 4 rollouts, LoRA r32, lr 1e-4, 4k-token rollouts | 73.7 → 73.7 / 77.0 / 78.0 / 75.3 (steps 10/20/30/40, n=300, ±5): gain is within noise | teacher KL 0.191 → 0.189; response length 443 → 3,639 tokens | pilot (reference point) | tinker://c8321dd6…/sampler_weights/final |
+
+**P1 at its final checkpoint (chosen in advance):** TPC-H 22 went from **11.5 → 17.0/22** (t=1.0 ×4; ranges 11–13 vs 14–19). 13 queries improved and 2 got worse (Q13, Q17). This run trained on proxy data only, with no TPC-H schema. The median response went from about 500 to about 3,200 words, so the student picked up the teacher's long reasoning. The dev gain is much smaller than the TPC-H gain. That fits Spider being easy, shallow SQL near its ceiling, but it is the overfitting tripwire, so it needs checking with the fresh and probe sets.
