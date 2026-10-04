@@ -65,3 +65,5 @@ having trained on the test, with an honest account of how well it generalizes.
 | Probes (22, changed meaning) | 10.75 (9–12) | 16.0 (13–18) |
 
 The probe gain matches the TPC-H gain, so this is better reading and reasoning, not recall of memorized TPC-H answers. The fresh-set gain confirms it transfers to new TPC-H-schema questions.
+
+**target_dev check for P1** (150 questions × 2 samples, t=1.0): base **53.7% ±5.6** → P1 final **76.0% ±4.8**, +22 points. It moves together with TPC-H (+25), fresh (+17) and probes (+24), which confirms target_dev as the decision metric. Spider dev only moved +2 to +4 points.
