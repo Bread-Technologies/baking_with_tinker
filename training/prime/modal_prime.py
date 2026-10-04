@@ -90,7 +90,17 @@ def inspect():
 
 
 @app.function(image=image, gpu="H100:2", volumes=VOLS, secrets=secrets, timeout=24 * 3600)
-def train(config_toml: str, run_name: str, extra_args: str = ""):
+def train(config_toml: str, run_name: str, extra_args: str = "", colocate: bool = False):
+    return _train(config_toml, run_name, extra_args, colocate)
+
+
+@app.function(image=image, gpu="H100", volumes=VOLS, secrets=secrets, timeout=24 * 3600)
+def train1(config_toml: str, run_name: str, extra_args: str = ""):
+    """One GPU per experiment: vLLM and the LoRA trainer share it (small models use a fraction of an H100)."""
+    return _train(config_toml, run_name, extra_args, colocate=True)
+
+
+def _train(config_toml: str, run_name: str, extra_args: str, colocate: bool):
     import subprocess
     import time
 
@@ -104,6 +114,9 @@ def train(config_toml: str, run_name: str, extra_args: str = ""):
     time.sleep(5)
 
     cmd = f"cd /app && .venv/bin/rl @ {run_dir / 'config.toml'} --output-dir {run_dir} {extra_args}"
+    if colocate:
+        # prime-rl assigns inference GPUs then trainer GPUs from CUDA_VISIBLE_DEVICES; "0,0" puts both on GPU 0.
+        cmd = ("CUDA_VISIBLE_DEVICES=0,0 " + cmd + " --inference.vllm.gpu-memory-utilization 0.45")
     print("$", cmd, flush=True)
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     with open(run_dir / "rl.log", "w") as log:
@@ -181,9 +194,9 @@ def untie(model: str = "Qwen/Qwen3.5-2B"):
 
 
 @app.local_entrypoint()
-def main(config: str = "", run_name: str = "", extra_args: str = "", dry: bool = False):
+def main(config: str = "", run_name: str = "", extra_args: str = "", dry: bool = False, gpus: int = 1):
     if dry:
         print("dry-run exit", dry_run.remote(Path(config).read_text()))
         return
-    rc = train.remote(Path(config).read_text(), run_name, extra_args)
+    rc = (train1 if gpus == 1 else train).remote(Path(config).read_text(), run_name, extra_args)
     print("finished with", rc)
