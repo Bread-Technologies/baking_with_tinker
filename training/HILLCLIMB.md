@@ -54,3 +54,13 @@ having trained on the test, with an honest account of how well it generalizes.
 | P1 | proxy | **Tinker pilot**: Qwen3.5-4B, 40 steps, 32 prompts × 4 rollouts, LoRA r32, lr 1e-4, 4k-token rollouts | 73.7 → 73.7 / 77.0 / 78.0 / 75.3 (steps 10/20/30/40, n=300, ±5): gain is within noise | teacher KL 0.191 → 0.189; response length 443 → 3,639 tokens | pilot (reference point) | tinker://c8321dd6…/sampler_weights/final |
 
 **P1 at its final checkpoint (chosen in advance):** TPC-H 22 went from **11.5 → 17.0/22** (t=1.0 ×4; ranges 11–13 vs 14–19). 13 queries improved and 2 got worse (Q13, Q17). This run trained on proxy data only, with no TPC-H schema. The median response went from about 500 to about 3,200 words, so the student picked up the teacher's long reasoning. The dev gain is much smaller than the TPC-H gain. That fits Spider being easy, shallow SQL near its ceiling, but it is the overfitting tripwire, so it needs checking with the fresh and probe sets.
+
+**P1 generalization (final checkpoint, t=1.0 ×4):**
+
+| Set | Base | P1 final |
+|---|---|---|
+| TPC-H 22 | 11.5 (11–13) | 17.0 (14–19) |
+| Fresh TPC-H (30) | 18.0 (17–20) | 23.0 (21–25) |
+| Probes (22, changed meaning) | 10.75 (9–12) | 16.0 (13–18) |
+
+The probe gain matches the TPC-H gain, so this is better reading and reasoning, not recall of memorized TPC-H answers. The fresh-set gain confirms it transfers to new TPC-H-schema questions.
