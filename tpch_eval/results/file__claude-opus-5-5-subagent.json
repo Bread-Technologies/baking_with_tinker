@@ -1,0 +1,163 @@
+{
+  "model": "claude-opus-5-5-subagent",
+  "backend": "file",
+  "sf": 0.01,
+  "score": 21,
+  "total": 22,
+  "results": [
+    {
+      "q": 1,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT l_returnflag, l_linestatus, SUM(l_quantity) AS sum_qty, SUM(l_extendedprice) AS sum_base_price, SUM(l_extendedprice * (1 - l_discount)) AS sum_disc_price, SUM(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge, AVG(l_quantity) AS avg_qty, AVG(l_extendedprice) AS avg_price, AVG(l_discount) AS avg_disc, COUNT(*) AS count_order\nFROM lineitem\nWHERE l_shipdate <= DATE '1998-09-02'\nGROUP BY l_returnflag, l_linestatus\nORDER BY l_returnflag, l_linestatus",
+      "response": "```sql\nSELECT l_returnflag, l_linestatus, SUM(l_quantity) AS sum_qty, SUM(l_extendedprice) AS sum_base_price, SUM(l_extendedprice * (1 - l_discount)) AS sum_disc_price, SUM(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge, AVG(l_quantity) AS avg_qty, AVG(l_extendedprice) AS avg_price, AVG(l_discount) AS avg_disc, COUNT(*) AS count_order\nFROM lineitem\nWHERE l_shipdate <= DATE '1998-09-02'\nGROUP BY l_returnflag, l_linestatus\nORDER BY l_returnflag, l_linestatus;\n```"
+    },
+    {
+      "q": 2,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment\nFROM part, supplier, partsupp, nation, region\nWHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type LIKE '%BRASS'\n  AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE'\n  AND ps_supplycost = (\n    SELECT MIN(ps2.ps_supplycost) FROM partsupp ps2, supplier s2, nation n2, region r2\n    WHERE ps2.ps_partkey = p_partkey AND s2.s_suppkey = ps2.ps_suppkey AND s2.s_nationkey = n2.n_nationkey\n      AND n2.n_regionkey = r2.r_regionkey AND r2.r_name = 'EUROPE')\nORDER BY s_acctbal DESC, n_name, s_name, p_partkey\nLIMIT 100",
+      "response": "```sql\nSELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment\nFROM part, supplier, partsupp, nation, region\nWHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type LIKE '%BRASS'\n  AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE'\n  AND ps_supplycost = (\n    SELECT MIN(ps2.ps_supplycost) FROM partsupp ps2, supplier s2, nation n2, region r2\n    WHERE ps2.ps_partkey = p_partkey AND s2.s_suppkey = ps2.ps_suppkey AND s2.s_nationkey = n2.n_nationkey\n      AND n2.n_regionkey = r2.r_regionkey AND r2.r_name = 'EUROPE')\nORDER BY s_acctbal DESC, n_name, s_name, p_partkey\nLIMIT 100;\n```"
+    },
+    {
+      "q": 3,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT l_orderkey, SUM(l_extendedprice * (1 - l_discount)) AS revenue, o_orderdate, o_shippriority\nFROM customer, orders, lineitem\nWHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey\n  AND o_orderdate < DATE '1995-03-15' AND l_shipdate > DATE '1995-03-15'\nGROUP BY l_orderkey, o_orderdate, o_shippriority\nORDER BY revenue DESC, o_orderdate\nLIMIT 10",
+      "response": "```sql\nSELECT l_orderkey, SUM(l_extendedprice * (1 - l_discount)) AS revenue, o_orderdate, o_shippriority\nFROM customer, orders, lineitem\nWHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey\n  AND o_orderdate < DATE '1995-03-15' AND l_shipdate > DATE '1995-03-15'\nGROUP BY l_orderkey, o_orderdate, o_shippriority\nORDER BY revenue DESC, o_orderdate\nLIMIT 10;\n```"
+    },
+    {
+      "q": 4,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT o_orderpriority, COUNT(*) AS order_count\nFROM orders\nWHERE o_orderdate >= DATE '1993-07-01' AND o_orderdate < DATE '1993-10-01'\n  AND EXISTS (SELECT 1 FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)\nGROUP BY o_orderpriority\nORDER BY o_orderpriority",
+      "response": "```sql\nSELECT o_orderpriority, COUNT(*) AS order_count\nFROM orders\nWHERE o_orderdate >= DATE '1993-07-01' AND o_orderdate < DATE '1993-10-01'\n  AND EXISTS (SELECT 1 FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)\nGROUP BY o_orderpriority\nORDER BY o_orderpriority;\n```"
+    },
+    {
+      "q": 5,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT n_name, SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM customer, orders, lineitem, supplier, nation, region\nWHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND l_suppkey = s_suppkey\n  AND c_nationkey = s_nationkey AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey\n  AND r_name = 'ASIA' AND o_orderdate >= DATE '1994-01-01' AND o_orderdate < DATE '1995-01-01'\nGROUP BY n_name\nORDER BY revenue DESC",
+      "response": "```sql\nSELECT n_name, SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM customer, orders, lineitem, supplier, nation, region\nWHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND l_suppkey = s_suppkey\n  AND c_nationkey = s_nationkey AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey\n  AND r_name = 'ASIA' AND o_orderdate >= DATE '1994-01-01' AND o_orderdate < DATE '1995-01-01'\nGROUP BY n_name\nORDER BY revenue DESC;\n```"
+    },
+    {
+      "q": 6,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT SUM(l_extendedprice * l_discount) AS revenue\nFROM lineitem\nWHERE l_shipdate >= DATE '1994-01-01' AND l_shipdate < DATE '1995-01-01'\n  AND l_discount BETWEEN 0.05 AND 0.07 AND l_quantity < 24",
+      "response": "```sql\nSELECT SUM(l_extendedprice * l_discount) AS revenue\nFROM lineitem\nWHERE l_shipdate >= DATE '1994-01-01' AND l_shipdate < DATE '1995-01-01'\n  AND l_discount BETWEEN 0.05 AND 0.07 AND l_quantity < 24;\n```"
+    },
+    {
+      "q": 7,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT n1.n_name AS supp_nation, n2.n_name AS cust_nation, EXTRACT(YEAR FROM l_shipdate) AS l_year, SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM supplier, lineitem, orders, customer, nation n1, nation n2\nWHERE s_suppkey = l_suppkey AND o_orderkey = l_orderkey AND c_custkey = o_custkey\n  AND s_nationkey = n1.n_nationkey AND c_nationkey = n2.n_nationkey\n  AND ((n1.n_name = 'FRANCE' AND n2.n_name = 'GERMANY') OR (n1.n_name = 'GERMANY' AND n2.n_name = 'FRANCE'))\n  AND l_shipdate BETWEEN DATE '1995-01-01' AND DATE '1996-12-31'\nGROUP BY supp_nation, cust_nation, l_year\nORDER BY supp_nation, cust_nation, l_year",
+      "response": "```sql\nSELECT n1.n_name AS supp_nation, n2.n_name AS cust_nation, EXTRACT(YEAR FROM l_shipdate) AS l_year, SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM supplier, lineitem, orders, customer, nation n1, nation n2\nWHERE s_suppkey = l_suppkey AND o_orderkey = l_orderkey AND c_custkey = o_custkey\n  AND s_nationkey = n1.n_nationkey AND c_nationkey = n2.n_nationkey\n  AND ((n1.n_name = 'FRANCE' AND n2.n_name = 'GERMANY') OR (n1.n_name = 'GERMANY' AND n2.n_name = 'FRANCE'))\n  AND l_shipdate BETWEEN DATE '1995-01-01' AND DATE '1996-12-31'\nGROUP BY supp_nation, cust_nation, l_year\nORDER BY supp_nation, cust_nation, l_year;\n```"
+    },
+    {
+      "q": 8,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT EXTRACT(YEAR FROM o_orderdate) AS o_year,\n  SUM(CASE WHEN n2.n_name = 'BRAZIL' THEN l_extendedprice * (1 - l_discount) ELSE 0 END) / SUM(l_extendedprice * (1 - l_discount)) AS mkt_share\nFROM part, supplier, lineitem, orders, customer, nation n1, nation n2, region\nWHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND o_custkey = c_custkey\n  AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND r_name = 'AMERICA'\n  AND s_nationkey = n2.n_nationkey\n  AND o_orderdate BETWEEN DATE '1995-01-01' AND DATE '1996-12-31'\n  AND p_type = 'ECONOMY ANODIZED STEEL'\nGROUP BY o_year\nORDER BY o_year",
+      "response": "```sql\nSELECT EXTRACT(YEAR FROM o_orderdate) AS o_year,\n  SUM(CASE WHEN n2.n_name = 'BRAZIL' THEN l_extendedprice * (1 - l_discount) ELSE 0 END) / SUM(l_extendedprice * (1 - l_discount)) AS mkt_share\nFROM part, supplier, lineitem, orders, customer, nation n1, nation n2, region\nWHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND o_custkey = c_custkey\n  AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND r_name = 'AMERICA'\n  AND s_nationkey = n2.n_nationkey\n  AND o_orderdate BETWEEN DATE '1995-01-01' AND DATE '1996-12-31'\n  AND p_type = 'ECONOMY ANODIZED STEEL'\nGROUP BY o_year\nORDER BY o_year;\n```"
+    },
+    {
+      "q": 9,
+      "correct": false,
+      "reason": "sql error: Binder Error: column \"n_name\" must appear in the GROUP BY clause or must be part of an aggregate function.",
+      "sql": "SELECT n_name AS nation, EXTRACT(YEAR FROM o_orderdate) AS o_year,\n  SUM(l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity) AS sum_profit\nFROM part, supplier, lineitem, partsupp, orders, nation\nWHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey\n  AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name LIKE '%green%'\nGROUP BY nation, o_year\nORDER BY nation, o_year DESC",
+      "response": "```sql\nSELECT n_name AS nation, EXTRACT(YEAR FROM o_orderdate) AS o_year,\n  SUM(l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity) AS sum_profit\nFROM part, supplier, lineitem, partsupp, orders, nation\nWHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey\n  AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name LIKE '%green%'\nGROUP BY nation, o_year\nORDER BY nation, o_year DESC;\n```"
+    },
+    {
+      "q": 10,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT c_custkey, c_name, SUM(l_extendedprice * (1 - l_discount)) AS revenue, c_acctbal, n_name, c_address, c_phone, c_comment\nFROM customer, orders, lineitem, nation\nWHERE c_custkey = o_custkey AND l_orderkey = o_orderkey\n  AND o_orderdate >= DATE '1993-10-01' AND o_orderdate < DATE '1994-01-01'\n  AND l_returnflag = 'R' AND c_nationkey = n_nationkey\nGROUP BY c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment\nORDER BY revenue DESC\nLIMIT 20",
+      "response": "```sql\nSELECT c_custkey, c_name, SUM(l_extendedprice * (1 - l_discount)) AS revenue, c_acctbal, n_name, c_address, c_phone, c_comment\nFROM customer, orders, lineitem, nation\nWHERE c_custkey = o_custkey AND l_orderkey = o_orderkey\n  AND o_orderdate >= DATE '1993-10-01' AND o_orderdate < DATE '1994-01-01'\n  AND l_returnflag = 'R' AND c_nationkey = n_nationkey\nGROUP BY c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment\nORDER BY revenue DESC\nLIMIT 20;\n```"
+    },
+    {
+      "q": 11,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT ps_partkey, SUM(ps_supplycost * ps_availqty) AS value\nFROM partsupp, supplier, nation\nWHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY'\nGROUP BY ps_partkey\nHAVING SUM(ps_supplycost * ps_availqty) > (\n  SELECT SUM(ps_supplycost * ps_availqty) * 0.0001\n  FROM partsupp, supplier, nation\n  WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY')\nORDER BY value DESC",
+      "response": "```sql\nSELECT ps_partkey, SUM(ps_supplycost * ps_availqty) AS value\nFROM partsupp, supplier, nation\nWHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY'\nGROUP BY ps_partkey\nHAVING SUM(ps_supplycost * ps_availqty) > (\n  SELECT SUM(ps_supplycost * ps_availqty) * 0.0001\n  FROM partsupp, supplier, nation\n  WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY')\nORDER BY value DESC;\n```"
+    },
+    {
+      "q": 12,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT l_shipmode,\n  SUM(CASE WHEN o_orderpriority = '1-URGENT' OR o_orderpriority = '2-HIGH' THEN 1 ELSE 0 END) AS high_line_count,\n  SUM(CASE WHEN o_orderpriority <> '1-URGENT' AND o_orderpriority <> '2-HIGH' THEN 1 ELSE 0 END) AS low_line_count\nFROM orders, lineitem\nWHERE o_orderkey = l_orderkey AND l_shipmode IN ('MAIL', 'SHIP')\n  AND l_commitdate < l_receiptdate AND l_shipdate < l_commitdate\n  AND l_receiptdate >= DATE '1994-01-01' AND l_receiptdate < DATE '1995-01-01'\nGROUP BY l_shipmode\nORDER BY l_shipmode",
+      "response": "```sql\nSELECT l_shipmode,\n  SUM(CASE WHEN o_orderpriority = '1-URGENT' OR o_orderpriority = '2-HIGH' THEN 1 ELSE 0 END) AS high_line_count,\n  SUM(CASE WHEN o_orderpriority <> '1-URGENT' AND o_orderpriority <> '2-HIGH' THEN 1 ELSE 0 END) AS low_line_count\nFROM orders, lineitem\nWHERE o_orderkey = l_orderkey AND l_shipmode IN ('MAIL', 'SHIP')\n  AND l_commitdate < l_receiptdate AND l_shipdate < l_commitdate\n  AND l_receiptdate >= DATE '1994-01-01' AND l_receiptdate < DATE '1995-01-01'\nGROUP BY l_shipmode\nORDER BY l_shipmode;\n```"
+    },
+    {
+      "q": 13,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT c_count, COUNT(*) AS custdist\nFROM (\n  SELECT c_custkey, COUNT(o_orderkey) AS c_count\n  FROM customer LEFT OUTER JOIN orders ON c_custkey = o_custkey AND o_comment NOT LIKE '%special%requests%'\n  GROUP BY c_custkey\n) AS c_orders\nGROUP BY c_count\nORDER BY custdist DESC, c_count DESC",
+      "response": "```sql\nSELECT c_count, COUNT(*) AS custdist\nFROM (\n  SELECT c_custkey, COUNT(o_orderkey) AS c_count\n  FROM customer LEFT OUTER JOIN orders ON c_custkey = o_custkey AND o_comment NOT LIKE '%special%requests%'\n  GROUP BY c_custkey\n) AS c_orders\nGROUP BY c_count\nORDER BY custdist DESC, c_count DESC;\n```"
+    },
+    {
+      "q": 14,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT 100.00 * SUM(CASE WHEN p_type LIKE 'PROMO%' THEN l_extendedprice * (1 - l_discount) ELSE 0 END) / SUM(l_extendedprice * (1 - l_discount)) AS promo_revenue\nFROM lineitem, part\nWHERE l_partkey = p_partkey AND l_shipdate >= DATE '1995-09-01' AND l_shipdate < DATE '1995-10-01'",
+      "response": "```sql\nSELECT 100.00 * SUM(CASE WHEN p_type LIKE 'PROMO%' THEN l_extendedprice * (1 - l_discount) ELSE 0 END) / SUM(l_extendedprice * (1 - l_discount)) AS promo_revenue\nFROM lineitem, part\nWHERE l_partkey = p_partkey AND l_shipdate >= DATE '1995-09-01' AND l_shipdate < DATE '1995-10-01';\n```"
+    },
+    {
+      "q": 15,
+      "correct": true,
+      "reason": "ok",
+      "sql": "WITH revenue AS (\n  SELECT l_suppkey AS supplier_no, SUM(l_extendedprice * (1 - l_discount)) AS total_revenue\n  FROM lineitem\n  WHERE l_shipdate >= DATE '1996-01-01' AND l_shipdate < DATE '1996-04-01'\n  GROUP BY l_suppkey\n)\nSELECT s_suppkey, s_name, s_address, s_phone, total_revenue\nFROM supplier, revenue\nWHERE s_suppkey = supplier_no AND total_revenue = (SELECT MAX(total_revenue) FROM revenue)\nORDER BY s_suppkey",
+      "response": "```sql\nWITH revenue AS (\n  SELECT l_suppkey AS supplier_no, SUM(l_extendedprice * (1 - l_discount)) AS total_revenue\n  FROM lineitem\n  WHERE l_shipdate >= DATE '1996-01-01' AND l_shipdate < DATE '1996-04-01'\n  GROUP BY l_suppkey\n)\nSELECT s_suppkey, s_name, s_address, s_phone, total_revenue\nFROM supplier, revenue\nWHERE s_suppkey = supplier_no AND total_revenue = (SELECT MAX(total_revenue) FROM revenue)\nORDER BY s_suppkey;\n```"
+    },
+    {
+      "q": 16,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT p_brand, p_type, p_size, COUNT(DISTINCT ps_suppkey) AS supplier_cnt\nFROM partsupp, part\nWHERE p_partkey = ps_partkey AND p_brand <> 'Brand#45' AND p_type NOT LIKE 'MEDIUM POLISHED%'\n  AND p_size IN (49, 14, 23, 45, 19, 3, 36, 9)\n  AND ps_suppkey NOT IN (SELECT s_suppkey FROM supplier WHERE s_comment LIKE '%Customer%Complaints%')\nGROUP BY p_brand, p_type, p_size\nORDER BY supplier_cnt DESC, p_brand, p_type, p_size",
+      "response": "```sql\nSELECT p_brand, p_type, p_size, COUNT(DISTINCT ps_suppkey) AS supplier_cnt\nFROM partsupp, part\nWHERE p_partkey = ps_partkey AND p_brand <> 'Brand#45' AND p_type NOT LIKE 'MEDIUM POLISHED%'\n  AND p_size IN (49, 14, 23, 45, 19, 3, 36, 9)\n  AND ps_suppkey NOT IN (SELECT s_suppkey FROM supplier WHERE s_comment LIKE '%Customer%Complaints%')\nGROUP BY p_brand, p_type, p_size\nORDER BY supplier_cnt DESC, p_brand, p_type, p_size;\n```"
+    },
+    {
+      "q": 17,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT SUM(l_extendedprice) / 7.0 AS avg_yearly\nFROM lineitem, part\nWHERE p_partkey = l_partkey AND p_brand = 'Brand#23' AND p_container = 'MED BOX'\n  AND l_quantity < (SELECT 0.2 * AVG(l2.l_quantity) FROM lineitem l2 WHERE l2.l_partkey = p_partkey)",
+      "response": "```sql\nSELECT SUM(l_extendedprice) / 7.0 AS avg_yearly\nFROM lineitem, part\nWHERE p_partkey = l_partkey AND p_brand = 'Brand#23' AND p_container = 'MED BOX'\n  AND l_quantity < (SELECT 0.2 * AVG(l2.l_quantity) FROM lineitem l2 WHERE l2.l_partkey = p_partkey);\n```"
+    },
+    {
+      "q": 18,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, SUM(l_quantity) AS sum_quantity\nFROM customer, orders, lineitem\nWHERE o_orderkey IN (SELECT l_orderkey FROM lineitem GROUP BY l_orderkey HAVING SUM(l_quantity) > 300)\n  AND c_custkey = o_custkey AND o_orderkey = l_orderkey\nGROUP BY c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice\nORDER BY o_totalprice DESC, o_orderdate\nLIMIT 100",
+      "response": "```sql\nSELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, SUM(l_quantity) AS sum_quantity\nFROM customer, orders, lineitem\nWHERE o_orderkey IN (SELECT l_orderkey FROM lineitem GROUP BY l_orderkey HAVING SUM(l_quantity) > 300)\n  AND c_custkey = o_custkey AND o_orderkey = l_orderkey\nGROUP BY c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice\nORDER BY o_totalprice DESC, o_orderdate\nLIMIT 100;\n```"
+    },
+    {
+      "q": 19,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM lineitem, part\nWHERE p_partkey = l_partkey AND l_shipmode IN ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON'\n  AND (\n    (p_brand = 'Brand#12' AND p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND l_quantity BETWEEN 1 AND 11 AND p_size BETWEEN 1 AND 5)\n    OR (p_brand = 'Brand#23' AND p_container IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') AND l_quantity BETWEEN 10 AND 20 AND p_size BETWEEN 1 AND 10)\n    OR (p_brand = 'Brand#34' AND p_container IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') AND l_quantity BETWEEN 20 AND 30 AND p_size BETWEEN 1 AND 15)\n  )",
+      "response": "```sql\nSELECT SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM lineitem, part\nWHERE p_partkey = l_partkey AND l_shipmode IN ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON'\n  AND (\n    (p_brand = 'Brand#12' AND p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND l_quantity BETWEEN 1 AND 11 AND p_size BETWEEN 1 AND 5)\n    OR (p_brand = 'Brand#23' AND p_container IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') AND l_quantity BETWEEN 10 AND 20 AND p_size BETWEEN 1 AND 10)\n    OR (p_brand = 'Brand#34' AND p_container IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') AND l_quantity BETWEEN 20 AND 30 AND p_size BETWEEN 1 AND 15)\n  );\n```"
+    },
+    {
+      "q": 20,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT s_name, s_address\nFROM supplier, nation\nWHERE s_suppkey IN (\n    SELECT ps_suppkey FROM partsupp\n    WHERE ps_partkey IN (SELECT p_partkey FROM part WHERE p_name LIKE 'forest%')\n      AND ps_availqty > (\n        SELECT 0.5 * SUM(l_quantity) FROM lineitem\n        WHERE l_partkey = ps_partkey AND l_suppkey = ps_suppkey\n          AND l_shipdate >= DATE '1994-01-01' AND l_shipdate < DATE '1995-01-01'))\n  AND s_nationkey = n_nationkey AND n_name = 'CANADA'\nORDER BY s_name",
+      "response": "```sql\nSELECT s_name, s_address\nFROM supplier, nation\nWHERE s_suppkey IN (\n    SELECT ps_suppkey FROM partsupp\n    WHERE ps_partkey IN (SELECT p_partkey FROM part WHERE p_name LIKE 'forest%')\n      AND ps_availqty > (\n        SELECT 0.5 * SUM(l_quantity) FROM lineitem\n        WHERE l_partkey = ps_partkey AND l_suppkey = ps_suppkey\n          AND l_shipdate >= DATE '1994-01-01' AND l_shipdate < DATE '1995-01-01'))\n  AND s_nationkey = n_nationkey AND n_name = 'CANADA'\nORDER BY s_name;\n```"
+    },
+    {
+      "q": 21,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT s_name, COUNT(*) AS numwait\nFROM supplier, lineitem l1, orders, nation\nWHERE s_suppkey = l1.l_suppkey AND o_orderkey = l1.l_orderkey AND o_orderstatus = 'F'\n  AND l1.l_receiptdate > l1.l_commitdate\n  AND EXISTS (SELECT 1 FROM lineitem l2 WHERE l2.l_orderkey = l1.l_orderkey AND l2.l_suppkey <> l1.l_suppkey)\n  AND NOT EXISTS (SELECT 1 FROM lineitem l3 WHERE l3.l_orderkey = l1.l_orderkey AND l3.l_suppkey <> l1.l_suppkey AND l3.l_receiptdate > l3.l_commitdate)\n  AND s_nationkey = n_nationkey AND n_name = 'SAUDI ARABIA'\nGROUP BY s_name\nORDER BY numwait DESC, s_name\nLIMIT 100",
+      "response": "```sql\nSELECT s_name, COUNT(*) AS numwait\nFROM supplier, lineitem l1, orders, nation\nWHERE s_suppkey = l1.l_suppkey AND o_orderkey = l1.l_orderkey AND o_orderstatus = 'F'\n  AND l1.l_receiptdate > l1.l_commitdate\n  AND EXISTS (SELECT 1 FROM lineitem l2 WHERE l2.l_orderkey = l1.l_orderkey AND l2.l_suppkey <> l1.l_suppkey)\n  AND NOT EXISTS (SELECT 1 FROM lineitem l3 WHERE l3.l_orderkey = l1.l_orderkey AND l3.l_suppkey <> l1.l_suppkey AND l3.l_receiptdate > l3.l_commitdate)\n  AND s_nationkey = n_nationkey AND n_name = 'SAUDI ARABIA'\nGROUP BY s_name\nORDER BY numwait DESC, s_name\nLIMIT 100;\n```"
+    },
+    {
+      "q": 22,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT cntrycode, COUNT(*) AS numcust, SUM(c_acctbal) AS totacctbal\nFROM (\n  SELECT SUBSTRING(c_phone, 1, 2) AS cntrycode, c_acctbal\n  FROM customer\n  WHERE SUBSTRING(c_phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17')\n    AND c_acctbal > (\n      SELECT AVG(c_acctbal) FROM customer\n      WHERE c_acctbal > 0.00 AND SUBSTRING(c_phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17'))\n    AND NOT EXISTS (SELECT 1 FROM orders WHERE o_custkey = c_custkey)\n) AS custsale\nGROUP BY cntrycode\nORDER BY cntrycode",
+      "response": "```sql\nSELECT cntrycode, COUNT(*) AS numcust, SUM(c_acctbal) AS totacctbal\nFROM (\n  SELECT SUBSTRING(c_phone, 1, 2) AS cntrycode, c_acctbal\n  FROM customer\n  WHERE SUBSTRING(c_phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17')\n    AND c_acctbal > (\n      SELECT AVG(c_acctbal) FROM customer\n      WHERE c_acctbal > 0.00 AND SUBSTRING(c_phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17'))\n    AND NOT EXISTS (SELECT 1 FROM orders WHERE o_custkey = c_custkey)\n) AS custsale\nGROUP BY cntrycode\nORDER BY cntrycode;\n```"
+    }
+  ]
+}
