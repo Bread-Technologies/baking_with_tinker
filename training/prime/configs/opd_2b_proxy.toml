@@ -4,7 +4,8 @@ max_steps = 100
 seq_len = 12288
 
 [model]
-name = "Qwen/Qwen3.5-2B"
+# Untied copy: prime-rl does not re-tie lm_head for tied Qwen3.5 checkpoints (see modal_prime.untie)
+name = "/data/models/Qwen3.5-2B-untied"
 
 [orchestrator]
 batch_size = 128          # rollouts per step (32 prompts x group_size 4)
@@ -24,7 +25,7 @@ name = "qwen3.5"
 enable_thinking = true
 
 [orchestrator.train.sampling]
-max_completion_tokens = 4096
+max_completion_tokens = 6144
 temperature = 1.0
 
 [[orchestrator.train.source]]

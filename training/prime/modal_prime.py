@@ -108,6 +108,42 @@ def dry_run(config_toml: str):
     return r.returncode
 
 
+@app.function(image=image, volumes=VOLS, timeout=3600, memory=32768)
+def untie(model: str = "Qwen/Qwen3.5-2B"):
+    """Write a copy of a tied-embedding checkpoint with an explicit lm_head (= embed_tokens) and
+    tie_word_embeddings=false. prime-rl's Qwen3.5 trainer skips loading lm_head for tied models
+    but never ties it back, leaving a zero output layer (uniform logits, zero gradients). LoRA
+    trains neither matrix, so the untied copy behaves identically to the original."""
+    import json
+    import shutil
+
+    import torch
+    from huggingface_hub import snapshot_download
+    from safetensors.torch import load_file, save_file
+
+    src = Path(snapshot_download(model))
+    dst = Path("/data/models") / (model.split("/")[-1] + "-untied")
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst, ignore=shutil.ignore_patterns("*.safetensors", "*.safetensors.index.json"))
+    tensors = {}
+    for f in sorted(src.glob("*.safetensors")):
+        tensors.update(load_file(str(f)))
+    emb_keys = [k for k in tensors if k.endswith("embed_tokens.weight") and "visual" not in k]
+    assert len(emb_keys) == 1, emb_keys
+    assert "lm_head.weight" not in tensors, "checkpoint already has lm_head"
+    tensors["lm_head.weight"] = tensors[emb_keys[0]].clone()
+    save_file(tensors, str(dst / "model.safetensors"), metadata={"format": "pt"})
+    cfg = json.loads((dst / "config.json").read_text())
+    cfg["tie_word_embeddings"] = False
+    if "text_config" in cfg:
+        cfg["text_config"]["tie_word_embeddings"] = False
+    (dst / "config.json").write_text(json.dumps(cfg, indent=2))
+    data.commit()
+    print("wrote", dst, "embed key", emb_keys[0], "lm_head", tuple(tensors["lm_head.weight"].shape))
+    return str(dst)
+
+
 @app.local_entrypoint()
 def main(config: str = "", run_name: str = "", extra_args: str = "", dry: bool = False):
     if dry:
