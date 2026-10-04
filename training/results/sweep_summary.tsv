@@ -1,1 +1,2 @@
 run	step	acc	ci95	n	sampler_path
+s05_proxy_lr5e-4	25	0.493	0.057	300	tinker://72e08530-edd2-526f-a173-ab031bbdf948:train:0/sampler_weights/000025
