@@ -21,8 +21,11 @@ image = (
     .entrypoint([])
     .add_local_dir(str(TRAINING / "prime_env" / "sql_opd"), "/pkgs/sql_opd", copy=True)
     .add_local_file(str(TRAINING / "tinker_teacher_shim.py"), "/pkgs/shim/tinker_teacher_shim.py", copy=True)
+    .add_local_file(str(HERE / "patches" / "opd_concurrent_scoring.py"), "/pkgs/patches/opd_concurrent_scoring.py", copy=True)
     .run_commands(
-        "cd /app && uv pip install --python /app/.venv/bin/python -e /pkgs/sql_opd tinker fastapi uvicorn duckdb"
+        "cd /app && uv pip install --python /app/.venv/bin/python -e /pkgs/sql_opd tinker fastapi uvicorn duckdb",
+        "/app/.venv/bin/python /pkgs/patches/opd_concurrent_scoring.py "
+        "$(/app/.venv/bin/python -c 'import prime_rl.orchestrator.algo.opd as m; print(m.__file__)')",
     )
     .env({"HF_HUB_ENABLE_HF_TRANSFER": "1", "PYTHONUNBUFFERED": "1"})
 )
