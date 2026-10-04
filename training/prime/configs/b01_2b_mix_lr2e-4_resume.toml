@@ -72,4 +72,4 @@ gpu_memory_utilization = 0.85
 name = "sql-train--qwen3.5-2b-untied--ffb57a3d"
 
 [resume]
-step = 25
+step = 30
