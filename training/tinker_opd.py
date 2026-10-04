@@ -38,12 +38,17 @@ class JsonlPromptDatasetBuilder(RLDatasetBuilder):
     model_name_for_tokenizer: str
     renderer_name: str
     seed: int = 0
+    epochs: int = 1
 
     async def __call__(self):
-        prompts = []
+        base = []
         for p in self.paths:
-            prompts += [json.loads(line)["prompt"] for line in open(p)]
-        random.Random(self.seed).shuffle(prompts)
+            base += [json.loads(line)["prompt"] for line in open(p)]
+        prompts = []
+        for e in range(self.epochs):  # reshuffle each pass so batches differ across epochs
+            ep = list(base)
+            random.Random(self.seed + e).shuffle(ep)
+            prompts += ep
         tokenizer = get_tokenizer(self.model_name_for_tokenizer)
         renderer = get_renderer(self.renderer_name, tokenizer=tokenizer)
         ds = PromptOnlyDataset(prompts=prompts, batch_size=self.groups_per_batch, group_size=self.group_size,
@@ -68,6 +73,7 @@ class CLI:
     kl_penalty_coef: float = 1.0
     log_path: str | None = None
     load_checkpoint_path: str | None = None
+    epochs: int = 1
 
 
 async def main(cli: CLI):
@@ -77,7 +83,7 @@ async def main(cli: CLI):
     log_path = cli.log_path or str(HERE / "runs" / f"opd-{cli.model_name.split('/')[-1]}-{datetime.now():%m%d-%H%M}")
     builder = JsonlPromptDatasetBuilder(paths=tuple(cli.data.split(",")), groups_per_batch=cli.groups_per_batch,
                                         group_size=cli.group_size, model_name_for_tokenizer=cli.model_name,
-                                        renderer_name=renderer_name)
+                                        renderer_name=renderer_name, epochs=cli.epochs)
     config = train_on_policy.Config(
         recipe_name="tpch_sql_opd",
         learning_rate=cli.learning_rate,
