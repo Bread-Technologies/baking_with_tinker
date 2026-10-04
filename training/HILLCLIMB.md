@@ -228,3 +228,12 @@ All four runs branch off b05 step 150 (clean; TPC-H vote 10/22). Each trains 60 
 | b07 hard_mix 140 | 13.50 (16) | 17.25 (23) | 12.75 (16) | 80.0% |
 
 hard_mix raises the single-sample mean by about 1 TPC-H point at matched steps, with no loss on Spider. The vote counts are noisy at this size (±2).
+
+**b07 collapsed after step ~155.** At step 160: TPC-H mean 4.12 (vote 7/22), fresh 3.5, probes 2.25, Spider 72.7%.
+- In the orchestrator log, rollout truncation at the 6144-token cap rose from ~5–25% (steps 140–155) to 60%+ (steps 161–171). Train reward (execution match) fell from ~0.40 to ~0.07.
+- In the eval, 146 of 352 TPC-H samples ran past the context limit: the student loops in its thinking and never closes it.
+- Diagnosis: the student degenerates into looping on the long, hard prompts at lr 2e-4. OPD's per-token reverse KL does not penalise the loop, and prime-rl has no option to drop truncated rollouts.
+- Action: cancelled b07. Its best checkpoint is step 140 (TPC-H mean 13.5, vote 16; probes vote 16; Spider 80%).
+- Lesson: on hard long-thinking data, use a lower lr or stop early; watch the Truncation column as an early-warning signal.
+
+b01 (mix) step 160: TPC-H mean 13.38, vote 17/22; fresh mean 19.06, vote 24/30; probes mean 12.00, vote 17/22; Spider 81.3%. Still stable: truncation ~25–35%, reward ~0.45.
