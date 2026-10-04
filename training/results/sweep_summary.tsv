@@ -16,3 +16,4 @@ s03_mix_lr2e-4	75	0.900	0.034	300	tinker://499f1fc8-9c10-530d-a58e-ccffdf1b7c8f:
 s06_mix_lr5e-4_tok8k	75	0.870	0.038	300	tinker://cb537060-02c7-55a7-b789-064b486e376f:train:0/sampler_weights/000075
 s07_mix_lr5e-4_r128	50	0.910	0.032	300	tinker://65a498c5-873c-505b-8e17-f40fdd50163e:train:0/sampler_weights/000050
 s01_mix_lr5e-4	50	0.873	0.038	300	tinker://70364a9e-a648-55f0-9ab6-3776ac51747c:train:0/sampler_weights/000050
+s04_target_lr5e-4	100	0.863	0.039	300	tinker://a8f3d04f-a313-5020-8990-86588bc24330:train:0/sampler_weights/000100
