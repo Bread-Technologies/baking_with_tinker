@@ -37,3 +37,7 @@ b01_2b_mix_lr2e-4 step100 probe: 12.38/22 mean over 16 sample(s) (range 9-14) | 
 b05_0p8b_mix_lr2e-4 step150 tpch: 6.19/22 mean over 16 sample(s) (range 3-8) | majority-vote@16 10/22
 b05_0p8b_mix_lr2e-4 step150 fresh: 6.62/30 mean over 16 sample(s) (range 4-9) | majority-vote@16 10/30
 b05_0p8b_mix_lr2e-4 step150 probe: 4.19/22 mean over 16 sample(s) (range 3-5) | majority-vote@16 7/22
+b01_2b_mix_lr2e-4 step120 tpch: 12.81/22 mean over 16 sample(s) (range 10-15) | majority-vote@16 18/22
+b01_2b_mix_lr2e-4 step120 fresh: 17.69/30 mean over 16 sample(s) (range 14-21) | majority-vote@16 21/30
+b01_2b_mix_lr2e-4 step120 probe: 11.19/22 mean over 16 sample(s) (range 8-15) | majority-vote@16 15/22
+b01_2b_mix_lr2e-4 step120 spider_test: 242/300 = 0.807 ± 0.045

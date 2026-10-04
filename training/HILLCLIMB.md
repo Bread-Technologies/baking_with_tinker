@@ -201,3 +201,19 @@ This is a small gain over s03 (mean +0.1 TPC-H, +0.4 fresh, +0.6 probes; probe v
 ### b07: branch the 2B off b01 step 110; one change, train data → hard_mix_train (as s10 did for the 4B)
 
 b01 keeps going on mix to step 200 as the control; b07 resumes the same checkpoint on hard_mix_train (171 hard multi-skill questions ×6 + mix) to step 200. Same lr, batch, and eval. Both are scored at matching steps with 16 samples + 2 repairs.
+
+2B (b01) step 120 (Modal-side eval; 16 samples + 2 repairs): TPC-H mean 12.81, **vote@16 18/22**; fresh mean 17.69, vote 21/30; probes mean 11.19, vote 15/22; Spider test (300, single sample) 80.7% ± 4.5.
+
+Evals now run as Modal jobs (tpch_eval/modal_eval_lora.py), because sandbox restarts kept killing local eval queues. training/sync_evals.py pulls the results back.
+
+### Memorization dial (0.8B; contaminated by design, reported only as a trade-off curve)
+
+All four runs branch off b05 step 150 (clean; TPC-H vote 10/22). Each trains 60 more steps to step 210, and is scored at steps 170, 190 and 210 on TPC-H, fresh, probes and Spider test. The data comes from training/memorization/build_dial.py.
+
+| Point | Training data | Rows |
+|---|---|---|
+| A | clean b05 step 150 | — |
+| B | mix + the 22 templates with new constants | 159 ×9 |
+| C | mix + paraphrases of the 22, same meaning | 170 ×9 |
+| D | mix + the exact 22 prompts | 22 ×68 |
+| E | the exact 22 prompts only | 22 |
