@@ -160,13 +160,16 @@ def make_generator(args):
         extra = {} if args.thinking is None else {
             "extra_body": {"chat_template_kwargs": {"enable_thinking": args.thinking == "on"}}}
 
-        def gen(prompt: str) -> str:
+        def gen(prompt: str, history=()) -> str:
+            msgs = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
+            for answer, feedback in history:
+                msgs += [{"role": "assistant", "content": answer}, {"role": "user", "content": feedback}]
             resp = client.chat.completions.create(
                 model=args.model,
                 max_tokens=args.max_tokens,
                 temperature=getattr(args, "temperature", 0.0),
                 top_p=getattr(args, "top_p", 1.0),
-                messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
+                messages=msgs,
                 **extra,
             )
             msg = resp.choices[0].message
@@ -191,8 +194,10 @@ def make_generator(args):
         )
         print(f"tinker renderer: {renderer_name}")
 
-        def gen(prompt: str) -> str:
+        def gen(prompt: str, history=()) -> str:
             msgs = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
+            for answer, feedback in history:
+                msgs += [{"role": "assistant", "content": answer}, {"role": "user", "content": feedback}]
             out = client.sample(renderer.build_generation_prompt(msgs), sampling_params=params, num_samples=1).result()
             msg, _ = renderer.parse_response(out.sequences[0].tokens)
             # Keep the reasoning trace in the saved response; extract_sql strips <think> blocks.
@@ -256,6 +261,7 @@ def main():
     ap.add_argument("--tag", default="", help="suffix for the results filename")
     ap.add_argument("--temperature", type=float, default=0.0)
     ap.add_argument("--top-p", type=float, default=1.0)
+    ap.add_argument("--retries", type=int, default=0, help="repair attempts after an execution error (error text only)")
     ap.add_argument("--samples", type=int, default=1, help="attempts per question; score is the mean")
     ap.add_argument("--concurrency", type=int, default=1, help="parallel generation requests")
     ap.add_argument("--max-tokens", type=int, default=4096)
@@ -290,8 +296,22 @@ def main():
     prompts = {q: build_prompt(schema, questions[q]) for q in qids}
 
     def generate(q):
+        """One attempt, plus up to --retries repairs when the SQL fails to execute (error text only, never gold)."""
         try:
-            return gen(prompts[q]), None
+            history = []
+            response = gen(prompts[q])
+            for _ in range(args.retries):
+                sql = extract_sql(response)
+                try:
+                    run_sql(con, sql)
+                    break
+                except Exception as e:  # noqa: BLE001
+                    err = str(e).splitlines()[0][:500]
+                    answer = re.sub(r"<think>.*?</think>", "", response, flags=re.S).strip() or f"```sql\n{sql}\n```"
+                    history.append((answer, f"Running your query in DuckDB failed with:\n{err}\n"
+                                            "Fix the query. Reply with only the corrected SQL in a ```sql code block."))
+                    response = gen(prompts[q], history) if history else gen(prompts[q])
+            return response, None
         except Exception as e:  # noqa: BLE001
             return "", f"generation error: {e}"
 
