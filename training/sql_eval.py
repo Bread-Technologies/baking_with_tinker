@@ -50,6 +50,15 @@ def run_duckdb(path: str, sql: str):
 
 def score(row: dict, response: str) -> tuple[bool, str, str]:
     sql = tpch.extract_sql(response)
+    if row.get("teacher_sql"):  # target-track row: TPC-H schema, gold = teacher SQL agreed across 2 samples
+        row = {**row, "duckdb_path": str(DATA / "tpch_sf0.01.duckdb")}
+        try:
+            gold = run_duckdb(row["duckdb_path"], row["teacher_sql"])
+            got = run_duckdb(row["duckdb_path"], sql)
+        except Exception as e:  # noqa: BLE001
+            return False, sql, f"sql error: {str(e).splitlines()[0][:200]}"
+        ok, why = tpch.results_match(got, gold)
+        return ok, sql, why
     try:
         gold = run_sqlite(row["sqlite_path"], row["gold_sql"])
     except Exception as e:  # noqa: BLE001
@@ -71,7 +80,7 @@ def load(split: str, n: int | None, seed: int = 0) -> list[dict]:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--split", default="spider_dev", choices=["spider_dev", "spider_test", "spider_dev_clean", "spider_test_clean"])
+    ap.add_argument("--split", default="spider_dev", choices=["spider_dev", "spider_test", "spider_dev_clean", "spider_test_clean", "target_dev"])
     ap.add_argument("--backend", required=True, choices=["claude", "tinker", "openai", "hf", "gold"])
     ap.add_argument("--model", default="gold")
     ap.add_argument("--base-url")
@@ -84,10 +93,11 @@ def main():
     ap.add_argument("--max-tokens", type=int, default=8192)
     ap.add_argument("--n", type=int, help="random subset size (fixed seed)")
     ap.add_argument("--concurrency", type=int, default=32)
+    ap.add_argument("--repeats", type=int, default=1, help="score each question this many times (sampled)")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
 
-    rows = load(args.split, args.n)
+    rows = load(args.split, args.n) * args.repeats
     if args.backend == "gold":
         def gen(row):
             return "```sql\n" + row["gold_sql"] + "\n```"

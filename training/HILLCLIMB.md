@@ -15,8 +15,9 @@ having trained on the test, with an honest account of how well it generalizes.
 | Tier | What it is | Used for |
 |---|---|---|
 | train (proxy) | BIRD and Spider train prompts. No TPC-H schema. | training only |
-| train (target) | New TPC-H-schema questions from `gen_tpch_questions.py`, decontaminated against the 22 | training only (target track) |
-| **dev** | `spider_dev_clean`: 648 questions on 20 databases unseen in training | **every keep/revert decision** |
+| train (target) | `target_train_split`: 762 new TPC-H-schema questions from `gen_tpch_questions.py`, decontaminated against the 22, the fresh set and the probes | training only (target track) |
+| **dev** | `target_dev`: 150 held-out target-track questions on the TPC-H schema. Gold is teacher SQL that agreed across 2 samples and was decontaminated against every test set; these never enter training | **every keep/revert decision** |
+| dev (secondary) | `spider_dev_clean`: 648 questions on 20 databases unseen in training | reported alongside; too easy and insensitive to decide on (P1: +2–4 pts vs +17–25 on TPC-H-style sets) |
 | far test | `spider_test_clean`: 1,414 questions on 40 more unseen databases | generalization report only |
 | fresh TPC-H | `tpch_eval/fresh`: 30 new hand-written TPC-H questions | report only, at checkpoints chosen in advance |
 | probe | 22 near-copies of the standard queries with the meaning changed | memorization check, report only |
