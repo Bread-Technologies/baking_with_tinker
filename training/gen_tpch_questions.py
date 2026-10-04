@@ -86,12 +86,18 @@ def main():
     ap.add_argument("--concurrency", type=int, default=32)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=str(HERE / "data" / "target_train_raw.jsonl"))
+    ap.add_argument("--hard", action="store_true",
+                    help="combine 2-3 skills per question at the depth of real multi-step analytical reports")
     args = ap.parse_args()
 
     con = tpch.connect(tpch.ensure_data(0.01))
     schema = tpch.schema_text(con)
     rng = random.Random(args.seed)
-    specs = [{"skill": rng.choice(SKILLS), "role": rng.choice(ROLES), "consts": sample_constants(con, rng)}
+    def pick_skill():
+        if not args.hard:
+            return rng.choice(SKILLS)
+        return " + ".join(rng.sample(SKILLS, rng.choice([2, 3])))
+    specs = [{"skill": pick_skill(), "role": rng.choice(ROLES), "consts": sample_constants(con, rng)}
              for _ in range(args.n)]
 
     gen_args = argparse.Namespace(backend="tinker", model=args.model, renderer=None, max_tokens=8192, temperature=0.7)
@@ -110,6 +116,10 @@ def main():
     def write_question(spec):
         user = (f"Schema:\n\n{schema}\n\nWrite one question for a {spec['role']} that exercises this SQL skill: "
                 f"{spec['skill']}. You may use at most two of these real values (fewer filters is fine): {spec['consts']}.")
+        if args.hard:
+            user += (" Make it a demanding multi-step analytical question that genuinely needs all of the listed "
+                     "skills together (e.g. nested or correlated subqueries feeding an aggregate, several joins, "
+                     "and precise conditions), the way a senior analyst's report query would.")
         msgs = [{"role": "system", "content": GEN_SYSTEM}, {"role": "user", "content": user}]
         out = client.sample(renderer.build_generation_prompt(msgs), sampling_params=params, num_samples=1).result()
         msg, _ = renderer.parse_response(out.sequences[0].tokens)

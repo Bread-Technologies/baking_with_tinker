@@ -126,3 +126,12 @@ So target_dev's ceiling is under 100%, and the 88–91% plateau is partly that c
 - **Result:** 2B is 1.4–3.9 min/step (about 2.5 average) and 0.8B about 1.5 min/step, each on one H100 shared by vLLM and the trainer. Teacher calls now overlap about 3.5×.
 - Round 1 (2B proxy, 2 GPUs, unpatched) was stopped at about step 20 and replaced by b06 (2B proxy, lr 2e-4).
 - Untrained baselines on target_dev at step 0: 2B 0.7–1.3%, 0.8B 0%.
+
+### Sweep S, first final-checkpoint test result (chosen in advance: step 200)
+
+| Run | target_dev @200 | TPC-H 22 | Fresh (30) | Probes (22) |
+|---|---|---|---|---|
+| s04 target only, lr 5e-4 | 89.7% | 17.75 (17–18) | 23.5 (23–24) | 16.5 (15–18) |
+| (P1, 40 steps, proxy) | 76.0% | 17.0 | 23.0 | 16.0 |
+
+**Finding:** 5× more training raised target_dev by 14 points but the test sets by less than 1. target_dev has stopped predicting test performance: its single-skill generated questions are easier than TPC-H's multi-condition reports, so they saturate first. Following the blog (the eval should mirror the real task, and difficulty should come from a human judgment of what is hard, not from test failures), I'm generating **hard** questions that combine 2–3 skills at report depth, with the same walled-off generator, to use as harder training prompts and a harder dev slice. Test failures were not used for this.
