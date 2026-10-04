@@ -116,7 +116,7 @@ def _train(config_toml: str, run_name: str, extra_args: str, colocate: bool):
     cmd = f"cd /app && .venv/bin/rl @ {run_dir / 'config.toml'} --output-dir {run_dir} {extra_args}"
     if colocate:
         # prime-rl assigns inference GPUs then trainer GPUs from CUDA_VISIBLE_DEVICES; "0,0" puts both on GPU 0.
-        cmd = ("CUDA_VISIBLE_DEVICES=0,0 " + cmd + " --inference.vllm.gpu-memory-utilization 0.45")
+        cmd = cmd.replace(".venv/bin/rl", "CUDA_VISIBLE_DEVICES=0,0 .venv/bin/rl") + " --inference.vllm.gpu-memory-utilization 0.45"
     print("$", cmd, flush=True)
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     with open(run_dir / "rl.log", "w") as log:
