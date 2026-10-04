@@ -11,6 +11,7 @@ python tpch_eval/eval.py --backend tinker --model Qwen/Qwen3.5-397B-A17B
 python tpch_eval/eval.py --backend claude --model claude-opus-5-5
 modal deploy tpch_eval/modal_serve.py                                        # Qwen2.5-Coder-1.5B-Instruct on vLLM
 python tpch_eval/eval.py --backend openai --model Qwen/Qwen2.5-Coder-1.5B-Instruct --base-url https://<ws>--tpch-qwen-coder-serve.modal.run/v1
+python tpch_eval/eval.py --backend hf     --model Qwen/Qwen2.5-Coder-1.5B-Instruct --max-tokens 1024  # local CPU; Modal's gRPC client cannot get through this sandbox's proxy
 ```
 
 Per-query SQL, responses and failure reasons are written to `tpch_eval/results/`.

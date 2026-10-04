@@ -10,6 +10,7 @@ Backends:
   claude   Anthropic API              (ANTHROPIC_API_KEY)
   tinker   Tinker sampling + renderer (TINKER_API_KEY)
   openai   OpenAI-compatible server, e.g. vLLM on Modal (--base-url)
+  hf       local HuggingFace transformers (greedy; CPU is fine for ~1.5B)
   gold     returns the reference SQL; sanity-checks the scorer (expect 22/22)
 
 Examples:
@@ -193,6 +194,24 @@ def make_generator(args):
 
         return gen
 
+    if args.backend == "hf":
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        tok = AutoTokenizer.from_pretrained(args.model)
+        dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+        model = AutoModelForCausalLM.from_pretrained(args.model, dtype=dtype)
+        model.eval()
+
+        def gen(prompt: str) -> str:
+            msgs = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}]
+            ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt", return_dict=True)
+            with torch.no_grad():
+                out = model.generate(**ids, max_new_tokens=args.max_tokens, do_sample=False)
+            return tok.decode(out[0, ids["input_ids"].shape[1]:], skip_special_tokens=True)
+
+        return gen
+
     if args.backend == "gold":
         # Sanity check: answer each question with its reference SQL (should score 22/22).
         refs = {QUESTIONS[q]: (ROOT / "reference" / f"q{q:02d}.sql").read_text() for q in QUESTIONS}
@@ -205,7 +224,7 @@ def make_generator(args):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--backend", required=True, choices=["claude", "tinker", "openai", "gold"])
+    ap.add_argument("--backend", required=True, choices=["claude", "tinker", "openai", "hf", "gold"])
     ap.add_argument("--model", required=True)
     ap.add_argument("--base-url", help="openai backend: server base URL ending in /v1")
     ap.add_argument("--api-key", help="openai backend: API key, if the server needs one")
