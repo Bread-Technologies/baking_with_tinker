@@ -75,7 +75,24 @@ def train(config_toml: str, run_name: str, extra_args: str = ""):
         for line in proc.stdout:
             print(line, end="", flush=True)
             log.write(line)
+    # The launcher returns once components start; they log to files under run_dir. Keep the
+    # container alive while they run, stream orchestrator progress, and commit the volume
+    # periodically so checkpoints and logs are visible from outside while training runs.
     rc = proc.wait()
+    seen = 0
+    while True:
+        alive = _sh("pgrep -f 'prime_rl.(orchestrator|trainer)' | wc -l").stdout.strip()
+        orch = sorted(run_dir.glob("*/logs/attempt_*/orchestrator.log"))
+        if orch:
+            lines = orch[-1].read_text(errors="replace").splitlines()
+            for line in lines[seen:]:
+                if any(k in line for k in ("Step", "step", "Eval", "eval", "ERROR", "Error", "Traceback")):
+                    print(line, flush=True)
+            seen = len(lines)
+        outputs.commit()
+        if alive in ("", "0"):
+            break
+        time.sleep(60)
     shim.terminate()
     _sh(f"curl -s localhost:8001/stats > {run_dir / 'teacher_stats.json'} || true")
     outputs.commit()
