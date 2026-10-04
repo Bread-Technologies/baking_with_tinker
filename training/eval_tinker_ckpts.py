@@ -1,4 +1,4 @@
-"""Score every saved sampler checkpoint of a Tinker OPD run on the dev set (and optionally TPC-H).
+"""Score saved sampler checkpoints of a Tinker OPD run on the dev set (target_dev by default; optionally TPC-H).
 
   python training/eval_tinker_ckpts.py training/runs/tinker4b_proxy_r1            # dev only
   python training/eval_tinker_ckpts.py training/runs/tinker4b_proxy_r1 --final-tpch  # + TPC-H on final only
@@ -20,7 +20,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run_dir")
     ap.add_argument("--model", default="Qwen/Qwen3.5-4B")
-    ap.add_argument("--n", type=int, default=300)
+    ap.add_argument("--n", type=int, default=None)
+    ap.add_argument("--split", default="target_dev")
+    ap.add_argument("--repeats", type=int, default=2)
     ap.add_argument("--final-tpch", action="store_true")
     ap.add_argument("--only-final", action="store_true")
     args = ap.parse_args()
@@ -40,9 +42,12 @@ def main():
         name = c.get("name", str(i))
         tag = f"__{run.name}__{name}"
         print(f"== {name}: {c['sampler_path']}", flush=True)
-        subprocess.run([sys.executable, str(HERE / "sql_eval.py"), "--split", "spider_dev_clean", *common,
-                        "--model-path", c["sampler_path"], "--max-tokens", "8192", "--n", str(args.n),
-                        "--concurrency", "48", "--tag", tag], check=False)
+        cmd = [sys.executable, str(HERE / "sql_eval.py"), "--split", args.split, *common,
+               "--model-path", c["sampler_path"], "--max-tokens", "16384", "--repeats", str(args.repeats),
+               "--concurrency", "64", "--tag", tag]
+        if args.n:
+            cmd += ["--n", str(args.n)]
+        subprocess.run(cmd, check=False)
         if args.final_tpch and i == len(ckpts) - 1:
             subprocess.run([sys.executable, str(ROOT / "tpch_eval" / "eval.py"), *common,
                             "--model-path", c["sampler_path"], "--samples", "4", "--max-tokens", "16384",
