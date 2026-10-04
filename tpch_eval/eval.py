@@ -11,6 +11,7 @@ Backends:
   tinker   Tinker sampling + renderer (TINKER_API_KEY)
   openai   OpenAI-compatible server, e.g. vLLM on Modal (--base-url)
   hf       local HuggingFace transformers (greedy; CPU is fine for ~1.5B)
+  file     pre-generated responses from a JSON file (--responses), e.g. a Claude Code subagent
   gold     returns the reference SQL; sanity-checks the scorer (expect 22/22)
 
 Examples:
@@ -212,6 +213,12 @@ def make_generator(args):
 
         return gen
 
+    if args.backend == "file":
+        # Pre-generated responses, e.g. from a Claude Code subagent: JSON {"1": "<response>", ...}
+        responses = json.loads(Path(args.responses).read_text())
+        by_prompt = {QUESTIONS[q]: responses[str(q)] for q in QUESTIONS if str(q) in responses}
+        return lambda prompt: by_prompt[prompt.split("Question:\n", 1)[1]]
+
     if args.backend == "gold":
         # Sanity check: answer each question with its reference SQL (should score 22/22).
         refs = {QUESTIONS[q]: (ROOT / "reference" / f"q{q:02d}.sql").read_text() for q in QUESTIONS}
@@ -224,10 +231,12 @@ def make_generator(args):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--backend", required=True, choices=["claude", "tinker", "openai", "hf", "gold"])
+    ap.add_argument("--backend", required=True, choices=["claude", "tinker", "openai", "hf", "file", "gold"])
     ap.add_argument("--model", required=True)
     ap.add_argument("--base-url", help="openai backend: server base URL ending in /v1")
     ap.add_argument("--api-key", help="openai backend: API key, if the server needs one")
+    ap.add_argument("--responses", help="file backend: JSON mapping question number to response text")
+    ap.add_argument("--dump-prompts", help="write {question number: full prompt} JSON here and exit")
     ap.add_argument("--renderer", help="tinker backend: override the recommended renderer")
     ap.add_argument("--sf", type=float, default=0.01, help="TPC-H scale factor")
     ap.add_argument("--max-tokens", type=int, default=4096)
@@ -242,6 +251,11 @@ def main():
 
     con = connect(ensure_data(args.sf))
     schema = schema_text(con)
+    if args.dump_prompts:
+        prompts = {q: f"Schema:\n\n{schema}\n\nQuestion:\n{QUESTIONS[q]}" for q in qids}
+        Path(args.dump_prompts).write_text(json.dumps({"system": SYSTEM_PROMPT, "prompts": prompts}, indent=2))
+        print(f"wrote {len(prompts)} prompts to {args.dump_prompts}")
+        return
     gen = make_generator(args)
 
     results = []
