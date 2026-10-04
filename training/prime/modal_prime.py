@@ -58,6 +58,23 @@ def _keep_loras(run_dir: Path, every: int = 10):
                 shutil.copy2(b / f, dst / f)
 
 
+@app.function(image=image, volumes=VOLS, timeout=12 * 3600)
+def keep_loras_loop(run_name: str, hours: float = 6.0, every: int = 10):
+    """Side job for runs launched without in-loop LoRA preservation: snapshot adapters every minute."""
+    import time
+    run_dir = Path("/outputs") / run_name
+    end = time.time() + hours * 3600
+    while time.time() < end:
+        outputs.reload()
+        _keep_loras(run_dir, every)
+        outputs.commit()
+        kept = sorted(p.name for p in (run_dir / "loras").glob("step_*")) if (run_dir / "loras").exists() else []
+        print(time.strftime("%H:%M:%S"), "kept:", kept, flush=True)
+        if any((run_dir / "loras" / f"step_{s}").exists() for s in (100,)):
+            break
+        time.sleep(60)
+
+
 @app.function(image=image, volumes=VOLS, timeout=1800)
 def inspect():
     for cmd in [
