@@ -11,13 +11,29 @@ import time
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
+_where: dict[str, tuple[str, str]] = {}
+
+
+def _containers() -> list[str]:
+    out = subprocess.run(["modal", "container", "list"], capture_output=True, text=True).stdout
+    return [line.split()[1] for line in out.splitlines() if "tpch-opd-prime" in line and "ta-" in line]
+
+
 def orchestrator_log(run: str) -> str:
-    ls = subprocess.run(["modal", "volume", "ls", "tpch-opd-outputs", f"/{run}"], capture_output=True, text=True).stdout
-    sub = [line.strip() for line in ls.splitlines() if line.strip().startswith(f"{run}/") and "--" in line]
-    if not sub:
+    """Read the live log from inside the running container (the volume only syncs at commit)."""
+    if run not in _where:
+        for c in _containers():
+            found = subprocess.run(["modal", "container", "exec", c, "--", "find", f"/outputs/{run}", "-name",
+                                    "orchestrator.log"], capture_output=True, text=True, timeout=90).stdout.split()
+            if found:
+                _where[run] = (c, found[0])
+                break
+    if run not in _where:
         return ""
-    path = f"/{sub[0]}/logs/attempt_1/orchestrator.log"
-    out = subprocess.run(["modal", "volume", "get", "tpch-opd-outputs", path, "-"], capture_output=True, text=True)
+    c, path = _where[run]
+    out = subprocess.run(["modal", "container", "exec", c, "--", "cat", path], capture_output=True, text=True, timeout=120)
+    if out.returncode != 0:
+        _where.pop(run, None)
     return ANSI.sub("", out.stdout)
 
 

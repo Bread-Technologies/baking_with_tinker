@@ -59,7 +59,7 @@ def _keep_loras(run_dir: Path, every: int = 10):
 
 
 @app.function(image=image, volumes=VOLS, timeout=12 * 3600)
-def keep_loras_loop(run_name: str, hours: float = 6.0, every: int = 10):
+def keep_loras_loop(run_name: str, hours: float = 12.0, every: int = 25, final_step: int = 200):
     """Side job for runs launched without in-loop LoRA preservation: snapshot adapters every minute."""
     import time
     run_dir = Path("/outputs") / run_name
@@ -70,7 +70,7 @@ def keep_loras_loop(run_name: str, hours: float = 6.0, every: int = 10):
         outputs.commit()
         kept = sorted(p.name for p in (run_dir / "loras").glob("step_*")) if (run_dir / "loras").exists() else []
         print(time.strftime("%H:%M:%S"), "kept:", kept, flush=True)
-        if any((run_dir / "loras" / f"step_{s}").exists() for s in (100,)):
+        if (run_dir / "loras" / f"step_{final_step}").exists():
             break
         time.sleep(60)
 
@@ -118,18 +118,14 @@ def _train(config_toml: str, run_name: str, extra_args: str, colocate: bool):
         # prime-rl assigns inference GPUs then trainer GPUs from CUDA_VISIBLE_DEVICES; "0,0" puts both on GPU 0.
         cmd = cmd.replace(".venv/bin/rl", "CUDA_VISIBLE_DEVICES=0,0 .venv/bin/rl") + " --inference.vllm.gpu-memory-utilization 0.45"
     print("$", cmd, flush=True)
-    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    with open(run_dir / "rl.log", "w") as log:
-        for line in proc.stdout:
-            print(line, end="", flush=True)
-            log.write(line)
-    # The launcher returns once components start; they log to files under run_dir. Keep the
-    # container alive while they run, stream orchestrator progress, and commit the volume
-    # periodically so checkpoints and logs are visible from outside while training runs.
-    rc = proc.wait()
+    log = open(run_dir / "rl.log", "w")
+    proc = subprocess.Popen(cmd, shell=True, stdout=log, stderr=subprocess.STDOUT, text=True)
+    # The launcher blocks until training ends and its components log to files under run_dir. Poll
+    # while it runs: stream orchestrator progress, keep LoRA snapshots, and commit the volume so
+    # logs and checkpoints are visible from outside during training.
     seen = 0
     while True:
-        alive = _sh("pgrep -f 'prime_rl.(orchestrator|trainer)' | wc -l").stdout.strip()
+        alive = "1" if proc.poll() is None else _sh("pgrep -f 'prime_rl.(orchestrator|trainer)' | wc -l").stdout.strip()
         orch = sorted(run_dir.glob("*/logs/attempt_*/orchestrator.log"))
         if orch:
             lines = orch[-1].read_text(errors="replace").splitlines()
@@ -142,6 +138,8 @@ def _train(config_toml: str, run_name: str, extra_args: str, colocate: bool):
         if alive in ("", "0"):
             break
         time.sleep(60)
+    rc = proc.wait()
+    log.close()
     shim.terminate()
     _sh(f"curl -s localhost:8001/stats > {run_dir / 'teacher_stats.json'} || true")
     outputs.commit()

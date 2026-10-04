@@ -10,3 +10,4 @@ s05_proxy_lr5e-4	50	0.550	0.056	300	tinker://72e08530-edd2-526f-a173-ab031bbdf94
 s03_mix_lr2e-4	50	0.870	0.038	300	tinker://499f1fc8-9c10-530d-a58e-ccffdf1b7c8f:train:0/sampler_weights/000050
 s06_mix_lr5e-4_tok8k	50	0.823	0.043	300	tinker://cb537060-02c7-55a7-b789-064b486e376f:train:0/sampler_weights/000050
 s04_target_lr5e-4	50	0.860	0.039	300	tinker://a8f3d04f-a313-5020-8990-86588bc24330:train:0/sampler_weights/000050
+s02_mix_lr1e-3	50	0.660	0.054	300	tinker://caea31b1-21f3-57f7-aa62-3abc830e96da:train:0/sampler_weights/000050
