@@ -1,0 +1,163 @@
+{
+  "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "backend": "hf",
+  "sf": 0.01,
+  "score": 4,
+  "total": 22,
+  "results": [
+    {
+      "q": 1,
+      "correct": false,
+      "reason": "row mismatch: got ('A', 'F', 380456.0, 532348211.65, 505822441.4861, 526165934.000839, 25.575154611454693, 35785.70930693735, 34002.58412786367, 14876.0) expected ('A', 'F', 380456.0, 532348211.65, 505822441.4861, 526165934.000839, 25.575154611454693, 35785.70930693735, 0.05008133906964238, 14876.0)",
+      "sql": "SELECT \n    l_returnflag,\n    l_linestatus,\n    SUM(l_quantity) AS sum_qty,\n    SUM(l_extendedprice) AS sum_base_price,\n    SUM(l_extendedprice * (1 - l_discount)) AS sum_disc_price,\n    SUM(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,\n    AVG(l_quantity) AS avg_qty,\n    AVG(l_extendedprice) AS avg_price,\n    AVG(l_extendedprice * (1 - l_discount)) AS avg_disc,\n    COUNT(*) AS count_order\nFROM \n    lineitem\nWHERE \n    l_shipdate <= '1998-09-02'\nGROUP BY \n    l_returnflag,\n    l_linestatus\nORDER BY \n    l_returnflag,\n    l_linestatus",
+      "response": "```sql\nSELECT \n    l_returnflag,\n    l_linestatus,\n    SUM(l_quantity) AS sum_qty,\n    SUM(l_extendedprice) AS sum_base_price,\n    SUM(l_extendedprice * (1 - l_discount)) AS sum_disc_price,\n    SUM(l_extendedprice * (1 - l_discount) * (1 + l_tax)) AS sum_charge,\n    AVG(l_quantity) AS avg_qty,\n    AVG(l_extendedprice) AS avg_price,\n    AVG(l_extendedprice * (1 - l_discount)) AS avg_disc,\n    COUNT(*) AS count_order\nFROM \n    lineitem\nWHERE \n    l_shipdate <= '1998-09-02'\nGROUP BY \n    l_returnflag,\n    l_linestatus\nORDER BY \n    l_returnflag,\n    l_linestatus;\n```"
+    },
+    {
+      "q": 2,
+      "correct": false,
+      "reason": "row count 5 != 4",
+      "sql": "SELECT \n    s.s_acctbal,\n    s.s_name,\n    n.n_name,\n    p.p_partkey,\n    p.p_mfgr,\n    s.s_address,\n    s.s_phone,\n    s.s_comment\nFROM \n    supplier s\nJOIN \n    partsupp ps ON s.s_suppkey = ps.ps_suppkey\nJOIN \n    part p ON ps.ps_partkey = p.p_partkey\nJOIN \n    nation n ON s.s_nationkey = n.n_nationkey\nWHERE \n    p.p_size = 15 AND p.p_type LIKE '%BRASS'\nAND \n    n.n_regionkey IN (SELECT r_regionkey FROM region WHERE r_name = 'EUROPE')\nORDER BY \n    s.s_acctbal DESC,\n    n.n_name,\n    s.s_name,\n    p.p_partkey\nLIMIT 100",
+      "response": "```sql\nSELECT \n    s.s_acctbal,\n    s.s_name,\n    n.n_name,\n    p.p_partkey,\n    p.p_mfgr,\n    s.s_address,\n    s.s_phone,\n    s.s_comment\nFROM \n    supplier s\nJOIN \n    partsupp ps ON s.s_suppkey = ps.ps_suppkey\nJOIN \n    part p ON ps.ps_partkey = p.p_partkey\nJOIN \n    nation n ON s.s_nationkey = n.n_nationkey\nWHERE \n    p.p_size = 15 AND p.p_type LIKE '%BRASS'\nAND \n    n.n_regionkey IN (SELECT r_regionkey FROM region WHERE r_name = 'EUROPE')\nORDER BY \n    s.s_acctbal DESC,\n    n.n_name,\n    s.s_name,\n    p.p_partkey\nLIMIT 100;\n```"
+    },
+    {
+      "q": 3,
+      "correct": false,
+      "reason": "sql error: Binder Error: column \"o_orderdate\" must appear in the GROUP BY clause or must be part of an aggregate function.",
+      "sql": "SELECT \n    l_orderkey,\n    SUM(l_extendedprice * (1 - l_discount)) AS revenue,\n    o_orderdate,\n    o_shippriority\nFROM \n    lineitem\nJOIN \n    orders ON l_orderkey = o_orderkey\nWHERE \n    o_orderdate < '1995-03-15' AND l_shipdate > '1995-03-15'\nGROUP BY \n    l_orderkey\nHAVING \n    COUNT(*) > 0\nORDER BY \n    revenue DESC, o_orderdate\nLIMIT 10",
+      "response": "```sql\nSELECT \n    l_orderkey,\n    SUM(l_extendedprice * (1 - l_discount)) AS revenue,\n    o_orderdate,\n    o_shippriority\nFROM \n    lineitem\nJOIN \n    orders ON l_orderkey = o_orderkey\nWHERE \n    o_orderdate < '1995-03-15' AND l_shipdate > '1995-03-15'\nGROUP BY \n    l_orderkey\nHAVING \n    COUNT(*) > 0\nORDER BY \n    revenue DESC, o_orderdate\nLIMIT 10;\n```"
+    },
+    {
+      "q": 4,
+      "correct": false,
+      "reason": "row mismatch: got ('1-URGENT', 104.0) expected ('1-URGENT', 93.0)",
+      "sql": "SELECT \n    o_orderpriority,\n    COUNT(*) AS order_count\nFROM \n    orders\nWHERE \n    o_orderdate >= '1993-07-01' AND o_orderdate < '1993-10-01'\nGROUP BY \n    o_orderpriority\nORDER BY \n    o_orderpriority",
+      "response": "```sql\nSELECT \n    o_orderpriority,\n    COUNT(*) AS order_count\nFROM \n    orders\nWHERE \n    o_orderdate >= '1993-07-01' AND o_orderdate < '1993-10-01'\nGROUP BY \n    o_orderpriority\nORDER BY \n    o_orderpriority;\n```"
+    },
+    {
+      "q": 5,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"l\" does not have a column named \"l_custkey\"",
+      "sql": "SELECT \n    n.n_name AS n_name,\n    SUM(l.extendedprice * (1 - l.discount)) AS revenue\nFROM \n    nation n\nJOIN \n    customer c ON n.n_nationkey = c.c_nationkey\nJOIN \n    supplier s ON c.c_nationkey = s.s_nationkey\nJOIN \n    lineitem l ON c.c_custkey = l.l_custkey AND s.s_suppkey = l.l_suppkey\nWHERE \n    c.o_orderdate >= '1994-01-01' AND c.o_orderdate < '1995-01-01'\nGROUP BY \n    n.n_name\nORDER BY \n    revenue DESC",
+      "response": "```sql\nSELECT \n    n.n_name AS n_name,\n    SUM(l.extendedprice * (1 - l.discount)) AS revenue\nFROM \n    nation n\nJOIN \n    customer c ON n.n_nationkey = c.c_nationkey\nJOIN \n    supplier s ON c.c_nationkey = s.s_nationkey\nJOIN \n    lineitem l ON c.c_custkey = l.l_custkey AND s.s_suppkey = l.l_suppkey\nWHERE \n    c.o_orderdate >= '1994-01-01' AND c.o_orderdate < '1995-01-01'\nGROUP BY \n    n.n_name\nORDER BY \n    revenue DESC;\n```"
+    },
+    {
+      "q": 6,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT SUM(l_extendedprice * l_discount) AS revenue\nFROM lineitem\nWHERE l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01'\nAND l_quantity < 24\nAND l_discount BETWEEN 0.05 AND 0.07",
+      "response": "```sql\nSELECT SUM(l_extendedprice * l_discount) AS revenue\nFROM lineitem\nWHERE l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01'\nAND l_quantity < 24\nAND l_discount BETWEEN 0.05 AND 0.07;\n```"
+    },
+    {
+      "q": 7,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"s\" does not have a column named \"n_nationkey\"",
+      "sql": "SELECT \n    s.n_name AS supp_nation,\n    c.n_name AS cust_nation,\n    EXTRACT(YEAR FROM l.shipdate) AS l_year,\n    SUM(l.extendedprice * (1 - l.discount)) AS revenue\nFROM \n    supplier s\nJOIN \n    customer c ON s.n_nationkey = c.n_nationkey\nJOIN \n    lineitem l ON s.suppkey = l.l_suppkey AND c.custkey = l.l_custkey\nWHERE \n    s.n_name IN ('FRANCE', 'GERMANY') AND c.n_name IN ('FRANCE', 'GERMANY')\nAND \n    l.l_shipdate BETWEEN '1995-01-01' AND '1996-12-31'\nGROUP BY \n    s.n_name, c.n_name, EXTRACT(YEAR FROM l.shipdate)\nORDER BY \n    s.n_name, c.n_name, l_year",
+      "response": "```sql\nSELECT \n    s.n_name AS supp_nation,\n    c.n_name AS cust_nation,\n    EXTRACT(YEAR FROM l.shipdate) AS l_year,\n    SUM(l.extendedprice * (1 - l.discount)) AS revenue\nFROM \n    supplier s\nJOIN \n    customer c ON s.n_nationkey = c.n_nationkey\nJOIN \n    lineitem l ON s.suppkey = l.l_suppkey AND c.custkey = l.l_custkey\nWHERE \n    s.n_name IN ('FRANCE', 'GERMANY') AND c.n_name IN ('FRANCE', 'GERMANY')\nAND \n    l.l_shipdate BETWEEN '1995-01-01' AND '1996-12-31'\nGROUP BY \n    s.n_name, c.n_name, EXTRACT(YEAR FROM l.shipdate)\nORDER BY \n    s.n_name, c.n_name, l_year;\n```"
+    },
+    {
+      "q": 8,
+      "correct": false,
+      "reason": "row mismatch: got (1995.0, 0.4021875887728181) expected (1995.0, 0.0)",
+      "sql": "SELECT \n    YEAR(o_orderdate) AS o_year,\n    SUM(CASE WHEN s_nationkey = 4 THEN ps_supplycost ELSE 0 END) / SUM(ps_supplycost) * 100 AS mkt_share\nFROM \n    orders o\nJOIN \n    lineitem l ON o.o_orderkey = l.l_orderkey\nJOIN \n    partsupp ps ON l.l_partkey = ps.ps_partkey\nJOIN \n    supplier s ON ps.ps_suppkey = s.s_suppkey\nWHERE \n    o.o_orderdate BETWEEN '1995-01-01' AND '1996-12-31'\n    AND l.l_partkey IN (SELECT p_partkey FROM part WHERE p_type = 'ECONOMY ANODIZED STEEL')\nGROUP BY \n    YEAR(o_orderdate)\nORDER BY \n    o_year",
+      "response": "```sql\nSELECT \n    YEAR(o_orderdate) AS o_year,\n    SUM(CASE WHEN s_nationkey = 4 THEN ps_supplycost ELSE 0 END) / SUM(ps_supplycost) * 100 AS mkt_share\nFROM \n    orders o\nJOIN \n    lineitem l ON o.o_orderkey = l.l_orderkey\nJOIN \n    partsupp ps ON l.l_partkey = ps.ps_partkey\nJOIN \n    supplier s ON ps.ps_suppkey = s.s_suppkey\nWHERE \n    o.o_orderdate BETWEEN '1995-01-01' AND '1996-12-31'\n    AND l.l_partkey IN (SELECT p_partkey FROM part WHERE p_type = 'ECONOMY ANODIZED STEEL')\nGROUP BY \n    YEAR(o_orderdate)\nORDER BY \n    o_year;\n```"
+    },
+    {
+      "q": 9,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"l\" does not have a column named \"ps_partkey\"",
+      "sql": "SELECT \n    n.n_name AS nation,\n    EXTRACT(YEAR FROM o.o_orderdate) AS o_year,\n    SUM((l.extendedprice * (1 - l.discount)) - (ps.supplycost * l.quantity)) AS sum_profit\nFROM \n    lineitem l\nJOIN \n    orders o ON l.l_orderkey = o.o_orderkey\nJOIN \n    partsupp ps ON l.ps_partkey = ps.ps_partkey\nJOIN \n    part p ON ps.ps_partkey = p.p_partkey\nJOIN \n    nation n ON p.p_nationkey = n.n_nationkey\nWHERE \n    p.p_name LIKE '%green%'\nGROUP BY \n    n.n_name, EXTRACT(YEAR FROM o.o_orderdate)\nORDER BY \n    n.n_name ASC, o_year DESC",
+      "response": "```sql\nSELECT \n    n.n_name AS nation,\n    EXTRACT(YEAR FROM o.o_orderdate) AS o_year,\n    SUM((l.extendedprice * (1 - l.discount)) - (ps.supplycost * l.quantity)) AS sum_profit\nFROM \n    lineitem l\nJOIN \n    orders o ON l.l_orderkey = o.o_orderkey\nJOIN \n    partsupp ps ON l.ps_partkey = ps.ps_partkey\nJOIN \n    part p ON ps.ps_partkey = p.p_partkey\nJOIN \n    nation n ON p.p_nationkey = n.n_nationkey\nWHERE \n    p.p_name LIKE '%green%'\nGROUP BY \n    n.n_name, EXTRACT(YEAR FROM o.o_orderdate)\nORDER BY \n    n.n_name ASC, o_year DESC;\n```"
+    },
+    {
+      "q": 10,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"l\" does not have a column named \"returnflag\"",
+      "sql": "SELECT \n    c.custkey,\n    c.c_name,\n    SUM(l.extendedprice * (1 - l.discount)) AS revenue,\n    c.c_acctbal,\n    n.n_name,\n    c.c_address,\n    c.c_phone,\n    c.c_comment\nFROM \n    orders o\nJOIN \n    lineitem l ON o.o_orderkey = l.l_orderkey\nJOIN \n    customer c ON o.o_custkey = c.c_custkey\nJOIN \n    nation n ON c.c_nationkey = n.n_nationkey\nWHERE \n    o.o_orderdate >= '1993-10-01' AND o.o_orderdate < '1994-01-01'\nAND \n    l.returnflag = 'R'\nGROUP BY \n    c.custkey, c.c_name, n.n_name, c.c_address, c.c_phone, c.c_comment\nORDER BY \n    revenue DESC\nLIMIT 20",
+      "response": "```sql\nSELECT \n    c.custkey,\n    c.c_name,\n    SUM(l.extendedprice * (1 - l.discount)) AS revenue,\n    c.c_acctbal,\n    n.n_name,\n    c.c_address,\n    c.c_phone,\n    c.c_comment\nFROM \n    orders o\nJOIN \n    lineitem l ON o.o_orderkey = l.l_orderkey\nJOIN \n    customer c ON o.o_custkey = c.c_custkey\nJOIN \n    nation n ON c.c_nationkey = n.n_nationkey\nWHERE \n    o.o_orderdate >= '1993-10-01' AND o.o_orderdate < '1994-01-01'\nAND \n    l.returnflag = 'R'\nGROUP BY \n    c.custkey, c.c_name, n.n_name, c.c_address, c.c_phone, c.c_comment\nORDER BY \n    revenue DESC\nLIMIT 20;\n```"
+    },
+    {
+      "q": 11,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT \n    ps_partkey,\n    SUM(ps_supplycost * ps_availqty) AS value\nFROM \n    partsupp\nWHERE \n    ps_suppkey IN (\n        SELECT \n            s_suppkey\n        FROM \n            supplier\n        WHERE \n            s_nationkey = (\n                SELECT \n                    n_nationkey\n                FROM \n                    nation\n                WHERE \n                    n_name = 'GERMANY'\n            )\n    )\nGROUP BY \n    ps_partkey\nHAVING \n    value > 0.0001 * (\n        SELECT \n            SUM(ps_supplycost * ps_availqty)\n        FROM \n            partsupp\n        WHERE \n            ps_suppkey IN (\n                SELECT \n                    s_suppkey\n                FROM \n                    supplier\n                WHERE \n                    s_nationkey = (\n                        SELECT \n                            n_nationkey\n                        FROM \n                            nation\n                        WHERE \n                            n_name = 'GERMANY'\n                    )\n            )\n    )\nORDER BY \n    value DESC",
+      "response": "```sql\nSELECT \n    ps_partkey,\n    SUM(ps_supplycost * ps_availqty) AS value\nFROM \n    partsupp\nWHERE \n    ps_suppkey IN (\n        SELECT \n            s_suppkey\n        FROM \n            supplier\n        WHERE \n            s_nationkey = (\n                SELECT \n                    n_nationkey\n                FROM \n                    nation\n                WHERE \n                    n_name = 'GERMANY'\n            )\n    )\nGROUP BY \n    ps_partkey\nHAVING \n    value > 0.0001 * (\n        SELECT \n            SUM(ps_supplycost * ps_availqty)\n        FROM \n            partsupp\n        WHERE \n            ps_suppkey IN (\n                SELECT \n                    s_suppkey\n                FROM \n                    supplier\n                WHERE \n                    s_nationkey = (\n                        SELECT \n                            n_nationkey\n                        FROM \n                            nation\n                        WHERE \n                            n_name = 'GERMANY'\n                    )\n            )\n    )\nORDER BY \n    value DESC;\n```"
+    },
+    {
+      "q": 12,
+      "correct": false,
+      "reason": "row mismatch: got ('MAIL', 451.0, 407.0) expected ('MAIL', 64.0, 86.0)",
+      "sql": "SELECT \n    l_shipmode,\n    SUM(CASE WHEN l_returnflag = 'R' THEN 1 ELSE 0 END) AS high_line_count,\n    SUM(CASE WHEN l_returnflag != 'R' THEN 1 ELSE 0 END) AS low_line_count\nFROM \n    lineitem\nWHERE \n    l_shipmode IN ('MAIL', 'SHIP')\n    AND l_receiptdate >= '1994-01-01'\n    AND l_receiptdate < '1995-01-01'\n    AND l_commitdate < l_receiptdate\nGROUP BY \n    l_shipmode\nORDER BY \n    l_shipmode",
+      "response": "```sql\nSELECT \n    l_shipmode,\n    SUM(CASE WHEN l_returnflag = 'R' THEN 1 ELSE 0 END) AS high_line_count,\n    SUM(CASE WHEN l_returnflag != 'R' THEN 1 ELSE 0 END) AS low_line_count\nFROM \n    lineitem\nWHERE \n    l_shipmode IN ('MAIL', 'SHIP')\n    AND l_receiptdate >= '1994-01-01'\n    AND l_receiptdate < '1995-01-01'\n    AND l_commitdate < l_receiptdate\nGROUP BY \n    l_shipmode\nORDER BY \n    l_shipmode;\n```"
+    },
+    {
+      "q": 13,
+      "correct": false,
+      "reason": "sql error: Binder Error: Referenced column \"c_custkey\" not found in FROM clause!",
+      "sql": "SELECT \n    COUNT(o_orderkey) AS c_count,\n    COUNT(CASE WHEN o_comment NOT LIKE '%special%requests%' THEN o_orderkey END) AS custdist\nFROM \n    orders\nGROUP BY \n    c_custkey\nORDER BY \n    c_count DESC, custdist DESC",
+      "response": "```sql\nSELECT \n    COUNT(o_orderkey) AS c_count,\n    COUNT(CASE WHEN o_comment NOT LIKE '%special%requests%' THEN o_orderkey END) AS custdist\nFROM \n    orders\nGROUP BY \n    c_custkey\nORDER BY \n    c_count DESC, custdist DESC;\n```"
+    },
+    {
+      "q": 14,
+      "correct": false,
+      "reason": "row mismatch: got (1.1912267469967974,) expected (15.48654581228407,)",
+      "sql": "SELECT \n    SUM(CASE WHEN l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01' THEN l_extendedprice * (1 - l_discount) ELSE 0 END) / SUM(l_extendedprice * (1 - l_discount)) * 100 AS promo_revenue\nFROM \n    lineitem",
+      "response": "```sql\nSELECT \n    SUM(CASE WHEN l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01' THEN l_extendedprice * (1 - l_discount) ELSE 0 END) / SUM(l_extendedprice * (1 - l_discount)) * 100 AS promo_revenue\nFROM \n    lineitem;\n```"
+    },
+    {
+      "q": 15,
+      "correct": false,
+      "reason": "sql error: Binder Error: Referenced column \"s_suppkey\" not found in FROM clause!",
+      "sql": "SELECT \n    s_suppkey,\n    s_name,\n    s_address,\n    s_phone,\n    SUM(l_extendedprice * (1 - l_discount)) AS total_revenue\nFROM \n    lineitem\nJOIN \n    orders ON l_orderkey = o_orderkey\nWHERE \n    o_orderdate >= '1996-01-01' AND o_orderdate < '1996-04-01'\nGROUP BY \n    s_suppkey, s_name, s_address, s_phone\nORDER BY \n    s_suppkey DESC",
+      "response": "```sql\nSELECT \n    s_suppkey,\n    s_name,\n    s_address,\n    s_phone,\n    SUM(l_extendedprice * (1 - l_discount)) AS total_revenue\nFROM \n    lineitem\nJOIN \n    orders ON l_orderkey = o_orderkey\nWHERE \n    o_orderdate >= '1996-01-01' AND o_orderdate < '1996-04-01'\nGROUP BY \n    s_suppkey, s_name, s_address, s_phone\nORDER BY \n    s_suppkey DESC;\n```"
+    },
+    {
+      "q": 16,
+      "correct": false,
+      "reason": "sql error: Binder Error: Referenced column \"p_brand\" not found in FROM clause!",
+      "sql": "SELECT \n    p_brand,\n    p_type,\n    p_size,\n    COUNT(DISTINCT s_suppkey) AS supplier_cnt\nFROM \n    partsupp\nWHERE \n    p_brand != 'Brand#45' AND \n    p_type NOT LIKE 'MEDIUM POLISHED' AND \n    p_size IN (49, 14, 23, 45, 19, 3, 36, 9) AND \n    s_comment NOT LIKE '%Customer%Complaints%'\nGROUP BY \n    p_brand,\n    p_type,\n    p_size\nORDER BY \n    supplier_cnt DESC,\n    p_brand,\n    p_type,\n    p_size ASC",
+      "response": "```sql\nSELECT \n    p_brand,\n    p_type,\n    p_size,\n    COUNT(DISTINCT s_suppkey) AS supplier_cnt\nFROM \n    partsupp\nWHERE \n    p_brand != 'Brand#45' AND \n    p_type NOT LIKE 'MEDIUM POLISHED' AND \n    p_size IN (49, 14, 23, 45, 19, 3, 36, 9) AND \n    s_comment NOT LIKE '%Customer%Complaints%'\nGROUP BY \n    p_brand,\n    p_type,\n    p_size\nORDER BY \n    supplier_cnt DESC,\n    p_brand,\n    p_type,\n    p_size ASC;\n```"
+    },
+    {
+      "q": 17,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT AVG(l_extendedprice) / 7.0 AS avg_yearly\nFROM lineitem\nWHERE l_partkey IN (\n    SELECT p_partkey\n    FROM part\n    WHERE p_brand = 'Brand#23'\n      AND p_container = 'MED BOX'\n)\nAND l_quantity < (SELECT AVG(l_quantity) * 0.2 FROM lineitem)",
+      "response": "```sql\nSELECT AVG(l_extendedprice) / 7.0 AS avg_yearly\nFROM lineitem\nWHERE l_partkey IN (\n    SELECT p_partkey\n    FROM part\n    WHERE p_brand = 'Brand#23'\n      AND p_container = 'MED BOX'\n)\nAND l_quantity < (SELECT AVG(l_quantity) * 0.2 FROM lineitem);\n```"
+    },
+    {
+      "q": 18,
+      "correct": true,
+      "reason": "ok",
+      "sql": "SELECT \n    c.c_name AS c_name,\n    c.c_custkey AS c_custkey,\n    o.o_orderkey AS o_orderkey,\n    o.o_orderdate AS o_orderdate,\n    o.o_totalprice AS o_totalprice,\n    SUM(l.l_quantity) AS sum_quantity\nFROM \n    customer c\nJOIN \n    orders o ON c.c_custkey = o.o_custkey\nJOIN \n    lineitem l ON o.o_orderkey = l.l_orderkey\nGROUP BY \n    c.c_name, c.c_custkey, o.o_orderkey, o.o_orderdate, o.o_totalprice\nHAVING \n    SUM(l.l_quantity) > 300\nORDER BY \n    o_totalprice DESC, o_orderdate\nLIMIT 100",
+      "response": "```sql\nSELECT \n    c.c_name AS c_name,\n    c.c_custkey AS c_custkey,\n    o.o_orderkey AS o_orderkey,\n    o.o_orderdate AS o_orderdate,\n    o.o_totalprice AS o_totalprice,\n    SUM(l.l_quantity) AS sum_quantity\nFROM \n    customer c\nJOIN \n    orders o ON c.c_custkey = o.o_custkey\nJOIN \n    lineitem l ON o.o_orderkey = l.l_orderkey\nGROUP BY \n    c.c_name, c.c_custkey, o.o_orderkey, o.o_orderdate, o.o_totalprice\nHAVING \n    SUM(l.l_quantity) > 300\nORDER BY \n    o_totalprice DESC, o_orderdate\nLIMIT 100;\n```"
+    },
+    {
+      "q": 19,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"lineitem\" does not have a column named \"l_size\"",
+      "sql": "SELECT SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM lineitem\nJOIN orders ON lineitem.l_orderkey = orders.o_orderkey\nWHERE lineitem.l_shipmode IN ('AIR', 'AIR REG') AND lineitem.l_shipinstruction = 'DELIVER IN PERSON'\nAND EXISTS (\n    SELECT 1\n    FROM part\n    WHERE part.p_partkey = lineitem.l_partkey\n      AND (\n          (part.p_brand = 'Brand#12' AND part.p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG'))\n            OR (part.p_brand = 'Brand#23' AND part.p_container IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK'))\n            OR (part.p_brand = 'Brand#34' AND part.p_container IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG'))\n      )\n      AND (lineitem.l_quantity BETWEEN 1 AND 11 OR lineitem.l_quantity BETWEEN 10 AND 20 OR lineitem.l_quantity BETWEEN 20 AND 30)\n      AND (lineitem.l_size BETWEEN 1 AND 5 OR lineitem.l_size BETWEEN 1 AND 10 OR lineitem.l_size BETWEEN 1 AND 15)\n)",
+      "response": "```sql\nSELECT SUM(l_extendedprice * (1 - l_discount)) AS revenue\nFROM lineitem\nJOIN orders ON lineitem.l_orderkey = orders.o_orderkey\nWHERE lineitem.l_shipmode IN ('AIR', 'AIR REG') AND lineitem.l_shipinstruction = 'DELIVER IN PERSON'\nAND EXISTS (\n    SELECT 1\n    FROM part\n    WHERE part.p_partkey = lineitem.l_partkey\n      AND (\n          (part.p_brand = 'Brand#12' AND part.p_container IN ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG'))\n            OR (part.p_brand = 'Brand#23' AND part.p_container IN ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK'))\n            OR (part.p_brand = 'Brand#34' AND part.p_container IN ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG'))\n      )\n      AND (lineitem.l_quantity BETWEEN 1 AND 11 OR lineitem.l_quantity BETWEEN 10 AND 20 OR lineitem.l_quantity BETWEEN 20 AND 30)\n      AND (lineitem.l_size BETWEEN 1 AND 5 OR lineitem.l_size BETWEEN 1 AND 10 OR lineitem.l_size BETWEEN 1 AND 15)\n);\n```"
+    },
+    {
+      "q": 20,
+      "correct": false,
+      "reason": "sql error: Parser Error: syntax error at or near \"ORDER\"",
+      "sql": "SELECT s.s_name, s.s_address\nFROM supplier s\nJOIN partsupp ps ON s.s_suppkey = ps.ps_suppkey\nWHERE s.n_nationkey IN (\n    SELECT n.n_nationkey\n    FROM nation n\n    WHERE n.n_name = 'CANADA'\n)\nAND EXISTS (\n    SELECT 1\n    FROM lineitem li\n    JOIN partsupp ps ON li.l_suppkey = ps.ps_suppkey AND li.l_partkey = ps.ps_partkey\n    WHERE ps.ps_availqty > (SELECT SUM(ps.availqty) * 0.5 FROM partsupp ps WHERE ps.ps_partkey = li.l_partkey)\n      AND li.l_shipdate >= '1994-01-01' AND li.l_shipdate < '1995-01-01'\n);\nORDER BY s.s_name",
+      "response": "```sql\nSELECT s.s_name, s.s_address\nFROM supplier s\nJOIN partsupp ps ON s.s_suppkey = ps.ps_suppkey\nWHERE s.n_nationkey IN (\n    SELECT n.n_nationkey\n    FROM nation n\n    WHERE n.n_name = 'CANADA'\n)\nAND EXISTS (\n    SELECT 1\n    FROM lineitem li\n    JOIN partsupp ps ON li.l_suppkey = ps.ps_suppkey AND li.l_partkey = ps.ps_partkey\n    WHERE ps.ps_availqty > (SELECT SUM(ps.availqty) * 0.5 FROM partsupp ps WHERE ps.ps_partkey = li.l_partkey)\n      AND li.l_shipdate >= '1994-01-01' AND li.l_shipdate < '1995-01-01'\n);\nORDER BY s.s_name;\n```"
+    },
+    {
+      "q": 21,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"l\" does not have a column named \"l_orderstatus\"",
+      "sql": "SELECT \n    s_name,\n    COUNT(l_orderkey) AS numwait\nFROM \n    supplier s\nJOIN \n    lineitem l ON s.s_suppkey = l.l_suppkey\nWHERE \n    l.l_orderstatus = 'F'\n    AND l.l_commitdate < l.l_receiptdate\n    AND EXISTS (\n        SELECT 1\n        FROM lineitem l2\n        WHERE l2.l_orderkey = l.l_orderkey\n          AND l2.l_suppkey != s.s_suppkey\n          AND l2.l_receiptdate > l2.l_commitdate\n    )\nGROUP BY \n    s_name\nORDER BY \n    numwait DESC, s_name\nLIMIT 100",
+      "response": "```sql\nSELECT \n    s_name,\n    COUNT(l_orderkey) AS numwait\nFROM \n    supplier s\nJOIN \n    lineitem l ON s.s_suppkey = l.l_suppkey\nWHERE \n    l.l_orderstatus = 'F'\n    AND l.l_commitdate < l.l_receiptdate\n    AND EXISTS (\n        SELECT 1\n        FROM lineitem l2\n        WHERE l2.l_orderkey = l.l_orderkey\n          AND l2.l_suppkey != s.s_suppkey\n          AND l2.l_receiptdate > l2.l_commitdate\n    )\nGROUP BY \n    s_name\nORDER BY \n    numwait DESC, s_name\nLIMIT 100;\n```"
+    },
+    {
+      "q": 22,
+      "correct": false,
+      "reason": "sql error: Binder Error: Table \"c\" does not have a column named \"s_nationkey\"",
+      "sql": "SELECT \n    SUBSTR(s.phone, 1, 2) AS cntrycode,\n    COUNT(c.custkey) AS numcust,\n    SUM(c.acctbal) AS totacctbal\nFROM \n    customer c\nJOIN \n    supplier s ON c.s_nationkey = s.n_nationkey\nWHERE \n    SUBSTR(s.phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17')\n    AND c.acctbal > 0.00\n    AND NOT EXISTS (\n        SELECT 1 FROM orders o WHERE o.custkey = c.custkey\n    )\nGROUP BY \n    cntrycode\nORDER BY \n    cntrycode",
+      "response": "```sql\nSELECT \n    SUBSTR(s.phone, 1, 2) AS cntrycode,\n    COUNT(c.custkey) AS numcust,\n    SUM(c.acctbal) AS totacctbal\nFROM \n    customer c\nJOIN \n    supplier s ON c.s_nationkey = s.n_nationkey\nWHERE \n    SUBSTR(s.phone, 1, 2) IN ('13', '31', '23', '29', '30', '18', '17')\n    AND c.acctbal > 0.00\n    AND NOT EXISTS (\n        SELECT 1 FROM orders o WHERE o.custkey = c.custkey\n    )\nGROUP BY \n    cntrycode\nORDER BY \n    cntrycode;\n```"
+    }
+  ]
+}
