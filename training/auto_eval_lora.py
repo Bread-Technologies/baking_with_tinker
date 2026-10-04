@@ -33,7 +33,7 @@ def done(run: str, step: int) -> bool:
     return SUMMARY.exists() and f"{run} step{step} tpch:" in SUMMARY.read_text()
 
 
-def evaluate(run: str, base: str, step: int, app: str, log_dir: Path, eval_args: str = "--samples 4"):
+def evaluate(run: str, base: str, step: int, app: str, log_dir: Path, eval_args: str = "--samples 4", spider: int = 0):
     name = f"{run}-s{step}"
     env = dict(os.environ, BASE=base, LORAS=f"{name}=/outputs/{run}/loras/step_{step}", MODAL_APP_NAME=app)
     r = subprocess.run("modal deploy tpch_eval/modal_serve_lora.py", shell=True, cwd=ROOT, env=env,
@@ -49,6 +49,12 @@ def evaluate(run: str, base: str, step: int, app: str, log_dir: Path, eval_args:
                f"--temperature 1.0 --top-p 0.95 {eval_args} --max-tokens 16384 --concurrency 96 --set {st}")
         procs[st] = subprocess.Popen(cmd, shell=True, cwd=ROOT, stdout=open(log_dir / f"{name}_{st}.log", "w"),
                                      stderr=subprocess.STDOUT)
+    if spider:  # broad generalization: held-out Spider test DBs (no TPC-H), one sample per question
+        cmd = (f"{sys.executable} training/sql_eval.py --split spider_test_clean --backend openai --base-url {url}/v1 "
+               f"--model {name} --thinking on --temperature 1.0 --top-p 0.95 --max-tokens 16384 --n {spider} "
+               f"--concurrency 96 --tag __{name}")
+        procs["spider"] = subprocess.Popen(cmd, shell=True, cwd=ROOT, stdout=open(log_dir / f"{name}_spider.log", "w"),
+                                           stderr=subprocess.STDOUT)
     for p in procs.values():
         p.wait()
     sh(f"modal app stop -y {app}")
@@ -57,6 +63,9 @@ def evaluate(run: str, base: str, step: int, app: str, log_dir: Path, eval_args:
         m = re.search(r": ([0-9.]+/\d+ mean over .*)$", (log_dir / f"{name}_{st}.log").read_text(), flags=re.M)
         v = re.search(r"majority-vote@\d+ \d+/\d+", (log_dir / f"{name}_{st}.log").read_text())
         lines.append(f"{run} step{step} {st}: {m.group(1) if m else 'FAILED'}" + (f" | {v.group(0)}" if v else ""))
+    if spider:
+        m = re.search(r"(\d+/\d+ = [0-9.]+ ± [0-9.]+)", (log_dir / f"{name}_spider.log").read_text())
+        lines.append(f"{run} step{step} spider_test: {m.group(1) if m else 'FAILED'}")
     with open(SUMMARY, "a") as f:
         f.write("\n".join(lines) + "\n")
     print("\n".join(lines), flush=True)
@@ -71,6 +80,7 @@ def main():
     ap.add_argument("--log-dir", default="/tmp")
     ap.add_argument("--poll", type=int, default=300)
     ap.add_argument("--eval-args", default="--samples 4", help="extra tpch_eval/eval.py args, e.g. '--samples 16 --retries 2'")
+    ap.add_argument("--spider", type=int, default=0, help="also score N held-out Spider test questions")
     args = ap.parse_args()
     steps = [int(s) for s in args.steps.split(",")]
     log_dir = Path(args.log_dir)
@@ -79,7 +89,7 @@ def main():
             if done(args.run, s):
                 steps.remove(s)
             elif lora_exists(args.run, s):
-                evaluate(args.run, args.base, s, args.app, log_dir, args.eval_args)
+                evaluate(args.run, args.base, s, args.app, log_dir, args.eval_args, args.spider)
                 steps.remove(s)
         if steps:
             time.sleep(args.poll)
