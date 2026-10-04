@@ -51,7 +51,8 @@ def eval_lora(run: str, base: str, step: int, eval_args: str = "--samples 16 --r
               sets: tuple = ("tpch", "fresh", "probe")) -> list[str]:
     import os
     import shutil
-    os.symlink("/data", f"{REPO}/training/data")
+    if not os.path.exists(f"{REPO}/training/data"):  # containers can be reused across calls
+        os.symlink("/data", f"{REPO}/training/data")
     # step 0 = the untrained base model (baseline), served under the run name
     name = f"{run}-s{step}"
     cmd = ["vllm", "serve", base, "--port", "8000", "--max-model-len", "32768", "--served-model-name", name if step == 0 else "base"]
