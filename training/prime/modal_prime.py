@@ -40,6 +40,24 @@ def _sh(cmd: str, **kw):
     return subprocess.run(cmd, shell=True, text=True, capture_output=True, **kw)
 
 
+def _keep_loras(run_dir: Path, every: int = 10):
+    """Copy every `every`-th broadcast LoRA (and the latest) into run_dir/loras/step_N before prime-rl prunes it."""
+    import shutil
+    steps = []
+    for b in run_dir.glob("*/broadcasts/step_*"):
+        if (b / "adapter_model.safetensors").exists() and (b / ".finished").exists():
+            steps.append((int(b.name.split("_")[1]), b))
+    if not steps:
+        return
+    latest = max(steps)[0]
+    for step, b in steps:
+        dst = run_dir / "loras" / f"step_{step}"
+        if (step % every == 0 or step == latest) and not dst.exists():
+            dst.mkdir(parents=True)
+            for f in ("adapter_model.safetensors", "adapter_config.json"):
+                shutil.copy2(b / f, dst / f)
+
+
 @app.function(image=image, volumes=VOLS, timeout=1800)
 def inspect():
     for cmd in [
@@ -89,6 +107,7 @@ def train(config_toml: str, run_name: str, extra_args: str = ""):
                 if any(k in line for k in ("Step", "step", "Eval", "eval", "ERROR", "Error", "Traceback")):
                     print(line, flush=True)
             seen = len(lines)
+        _keep_loras(run_dir)
         outputs.commit()
         if alive in ("", "0"):
             break
