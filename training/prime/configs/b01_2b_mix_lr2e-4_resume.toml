@@ -9,7 +9,7 @@ seq_len = 12288
 name = "/data/models/Qwen3.5-2B-untied"
 
 [orchestrator]
-batch_size = 128          # rollouts per step (32 prompts x group_size 4)
+batch_size = 512          # rollouts per step (128 prompts x group_size 4)
 
 [orchestrator.train]
 group_size = 4
