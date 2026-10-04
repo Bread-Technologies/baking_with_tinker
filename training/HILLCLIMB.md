@@ -152,3 +152,12 @@ Under the same sampling the teacher is perfect, so 22/22 is reachable. The stude
 - Cut sweep B from 6 Modal runs to 2: **b01** (2B, mix, lr 2e-4: the best 4B recipe) and **b05** (0.8B). Every Modal run also pays for 397B teacher scoring on Tinker at every step.
 - What sweep S settled: lr 2e-4 to 5e-4 and the mix/target data all plateau at about 17–18/22 on TPC-H, and more steps, rank or rollout length don't move it. The remaining lever is *what* the student practices (harder prompts that need long reasoning), not more of the same training.
 - From now on, run one experiment at a time with a stated hypothesis; score dev with 1 sample (not 2) and only at chosen steps; run the 4-sample test sets on final checkpoints only.
+
+### Sweep B (kept: b01 2B, b05 0.8B), target_dev in prime-rl (150 × 1 sample, t=1.0)
+
+| Run | step 0 | step 25 |
+|---|---|---|
+| b01 2B mix lr 2e-4 | 1.3% | **19.6%** |
+| b05 0.8B mix lr 2e-4 | 0.0% | **8.0%** |
+
+The 2B's training-set execution reward went from 0.07–0.15 to about 0.30 by step 35–40. Steps take 1–5 minutes; step 30 of b01 had a 40.9% rollout-error burst (router circuit breaker), recovered by step 40.
