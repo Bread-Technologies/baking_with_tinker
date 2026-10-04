@@ -82,3 +82,21 @@ The probe gain matches the TPC-H gain, so this is better reading and reasoning, 
 - Each step takes 3–4.5 minutes on 2×H100. About 55% of rollouts hit the 6,144-token cap (the 2B thinks at length), so each step is about 650k student tokens plus about 700k teacher-scored tokens on Tinker.
 - The vLLM router circuit breaker opens briefly at some weight updates (step 5: 78% of traces failed and were resampled).
 - Plan: tune the recipe on Tinker with the 4B (fast, run in parallel), then move it to the 2B with 4 GPUs (2 inference + 2 trainer).
+
+## Sweep S (Tinker, Qwen3.5-4B, 200 steps each, run in parallel; base = 50/50 mix, lr 5e-4, 4k-token rollouts, rank 32)
+
+target_dev (150 × 2 samples, t=1.0), updated as checkpoints land. Base model: 53.7%.
+
+| Run | Change | step 25 | step 50 | Notes |
+|---|---|---|---|---|
+| s01 | base | 83.3 | | |
+| s02 | lr 1e-3 | 79.3 | 66.0 | **stopped**: getting worse, LR too high |
+| s03 | lr 2e-4 | 86.0 | 87.0 | |
+| s04 | target data only, lr 5e-4 | 83.7 | 86.0 | |
+| s05 | proxy data only, lr 5e-4 | 49.3 | 55.0 | proxy at 5e-4 doesn't help (P1 used proxy at 1e-4 and reached 76.0) |
+| s06 | 8k-token rollouts | 79.0 | 82.3 | |
+| s07 | rank 128 | 88.0 | | |
+
+## Sweep B (prime-rl on Modal, 1×H100 per run with vLLM and trainer on the same GPU, 200 steps)
+
+b01: 2B mix lr 2e-4 · b02: 2B mix lr 5e-4 r128 · b03: 2B mix lr 1e-4 · b04: 2B target lr 2e-4 · b05: 0.8B mix lr 2e-4. Eval: target_dev every 25 steps.
