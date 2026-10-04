@@ -25,3 +25,6 @@ b01_2b_mix_lr2e-4 step80 probe: 9.00/22 mean over 4 sample(s) (range 7-10)
 4B s03 final x16 tpch: 17.56/22 mean over 16 sample(s) (range 15-20) | majority-vote@16 19/22
 4B s03 final x16 fresh: 25.75/30 mean over 16 sample(s) (range 23-28) | majority-vote@16 28/30
 4B s03 final x16 probe: 18.19/22 mean over 16 sample(s) (range 16-21) | majority-vote@16 19/22
+4B s03 final x16 retry2 tpch: 18.75/22 mean over 16 sample(s) (range 17-20) | majority-vote@16 20/22
+4B s03 final x16 retry2 fresh: 26.50/30 mean over 16 sample(s) (range 24-28) | majority-vote@16 27/30
+4B s03 final x16 retry2 probe: 19.00/22 mean over 16 sample(s) (range 18-20) | majority-vote@16 20/22

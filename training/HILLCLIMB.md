@@ -172,3 +172,15 @@ The 2B's training-set execution reward went from 0.07–0.15 to about 0.30 by st
 | 60 | 9.75 (8–12) | 12.75 | 10.5 | 14/88 |
 
 Gains are steady but slow. Operational notes: twice the runs were cancelled because they were launched with `modal run --detach`, which ties them to the local client; they are now spawned on the deployed app. The local eval driver also died with the sandbox's background processes, so evals now run as tracked background tasks, with scheduled check-ins as a backstop.
+
+### Test-time scaling on the best 4B (s03 final), using only the model's own SQL and the database (never gold)
+
+| Setting | TPC-H 22 | Fresh (30) | Probes (22) |
+|---|---|---|---|
+| single sample (mean of 16) | 17.56 | 25.75 | 18.19 |
+| majority vote over 16 by executed result | 19 | 28 | 19 |
+| + up to 2 repairs after an execution error, then vote@16 | **20** (mean 18.75) | 27 | **20** |
+
+The repairs remove all execution-error failures (binder errors). Two TPC-H questions remain wrong in most samples: one at 0% and one at 25%. These are reasoning errors, not dialect errors. Per the rules, the specific test failures are not used to shape training. The generic levers still open are harder multi-skill prompts and multi-turn training with execution feedback.
+
+2B (b01) step 80: TPC-H 11.25 (9–12); majority@4 14; pass@4 15. Fresh 13.5; probes 9.0.
