@@ -52,11 +52,12 @@ def eval_lora(run: str, base: str, step: int, eval_args: str = "--samples 16 --r
     import os
     import shutil
     os.symlink("/data", f"{REPO}/training/data")
+    # step 0 = the untrained base model (baseline), served under the run name
     name = f"{run}-s{step}"
-    lora = f"/outputs/{run}/loras/step_{step}"
-    subprocess.Popen(["vllm", "serve", base, "--port", "8000", "--max-model-len", "32768", "--served-model-name", "base",
-                      "--enable-lora", "--max-lora-rank", "64", "--lora-modules", f"{name}={lora}"],
-                     stdout=open("/tmp/vllm.log", "w"), stderr=subprocess.STDOUT)
+    cmd = ["vllm", "serve", base, "--port", "8000", "--max-model-len", "32768", "--served-model-name", name if step == 0 else "base"]
+    if step:
+        cmd += ["--enable-lora", "--max-lora-rank", "64", "--lora-modules", f"{name}=/outputs/{run}/loras/step_{step}"]
+    subprocess.Popen(cmd, stdout=open("/tmp/vllm.log", "w"), stderr=subprocess.STDOUT)
     for _ in range(180):
         if subprocess.run("curl -sf localhost:8000/v1/models", shell=True, capture_output=True).returncode == 0:
             break
