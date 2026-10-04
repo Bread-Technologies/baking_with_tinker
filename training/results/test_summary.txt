@@ -62,3 +62,23 @@ b07_2b_hardmix_from110 step160 tpch: 4.12/22 mean over 16 sample(s) (range 2-6) 
 b07_2b_hardmix_from110 step160 fresh: 3.50/30 mean over 16 sample(s) (range 1-5) | majority-vote@16 8/30
 b07_2b_hardmix_from110 step160 probe: 2.25/22 mean over 16 sample(s) (range 1-5) | majority-vote@16 5/22
 b07_2b_hardmix_from110 step160 spider_test: 218/300 = 0.727 ± 0.050
+dial_0p8b_variants step170 tpch: 11.75/22 mean over 16 sample(s) (range 9-14) | majority-vote@16 15/22
+dial_0p8b_variants step170 fresh: 10.06/30 mean over 16 sample(s) (range 8-12) | majority-vote@16 13/30
+dial_0p8b_variants step170 probe: 8.88/22 mean over 16 sample(s) (range 7-12) | majority-vote@16 14/22
+dial_0p8b_variants step170 spider_test: 196/300 = 0.653 ± 0.054
+dial_0p8b_exact step170 tpch: 11.69/22 mean over 16 sample(s) (range 8-14) | majority-vote@16 15/22
+dial_0p8b_exact step170 fresh: 9.56/30 mean over 16 sample(s) (range 7-11) | majority-vote@16 13/30
+dial_0p8b_exact step170 probe: 7.69/22 mean over 16 sample(s) (range 5-10) | majority-vote@16 14/22
+dial_0p8b_exact step170 spider_test: 195/300 = 0.650 ± 0.054
+base_0p8b step0 tpch: 0.06/22 mean over 16 sample(s) (range 0-1) | majority-vote@16 1/22
+base_0p8b step0 fresh: 0.44/30 mean over 16 sample(s) (range 0-2) | majority-vote@16 3/30
+base_0p8b step0 probe: 0.31/22 mean over 16 sample(s) (range 0-1) | majority-vote@16 2/22
+base_0p8b step0 spider_test: 89/300 = 0.297 ± 0.052
+dial_0p8b_exactonly step170 tpch: 14.94/22 mean over 16 sample(s) (range 13-17) | majority-vote@16 17/22
+dial_0p8b_exactonly step170 fresh: 9.56/30 mean over 16 sample(s) (range 7-11) | majority-vote@16 12/30
+dial_0p8b_exactonly step170 probe: 11.69/22 mean over 16 sample(s) (range 9-14) | majority-vote@16 15/22
+dial_0p8b_exactonly step170 spider_test: 182/300 = 0.607 ± 0.055
+dial_0p8b_paraphrase step170 tpch: 8.75/22 mean over 16 sample(s) (range 6-13) | majority-vote@16 11/22
+dial_0p8b_paraphrase step170 fresh: 9.69/30 mean over 16 sample(s) (range 7-12) | majority-vote@16 13/30
+dial_0p8b_paraphrase step170 probe: 7.06/22 mean over 16 sample(s) (range 5-10) | majority-vote@16 9/22
+dial_0p8b_paraphrase step170 spider_test: 206/300 = 0.687 ± 0.052

@@ -237,3 +237,17 @@ hard_mix raises the single-sample mean by about 1 TPC-H point at matched steps, 
 - Lesson: on hard long-thinking data, use a lower lr or stop early; watch the Truncation column as an early-warning signal.
 
 b01 (mix) step 160: TPC-H mean 13.38, vote 17/22; fresh mean 19.06, vote 24/30; probes mean 12.00, vote 17/22; Spider 81.3%. Still stable: truncation ~25–35%, reward ~0.45.
+
+**Untrained 0.8B (step 0, same eval):** TPC-H mean 0.06 (vote 1/22); fresh 0.44 (3/30); probes 0.31 (2/22); Spider 29.7%.
+
+**Dial at step 170** (20 steps after branching; mean, with vote@16 in parentheses):
+
+| point | TPC-H | fresh | probes | Spider |
+|---|---|---|---|---|
+| A clean s150 | 6.19 (10) | 6.62 (10) | 4.19 (7) | 65.7% |
+| B variants | 11.75 (15) | 10.06 (13) | 8.88 (14) | 65.3% |
+| C paraphrase | 8.75 (11) | 9.69 (13) | 7.06 (9) | 68.7% |
+| D exact+mix | 11.69 (15) | 9.56 (13) | 7.69 (14) | 65.0% |
+| E exact only | 14.94 (17) | 9.56 (12) | 11.69 (15) | 60.7% |
+
+Fresh rises at every point, so part of each gain may come from the extra 20 steps rather than from the dial data. I added a clean control, dial_0p8b_clean (same branch and steps, mix_train only), so each point can be compared at a matched step.
