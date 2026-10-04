@@ -135,3 +135,14 @@ So target_dev's ceiling is under 100%, and the 88–91% plateau is partly that c
 | (P1, 40 steps, proxy) | 76.0% | 17.0 | 23.0 | 16.0 |
 
 **Finding:** 5× more training raised target_dev by 14 points but the test sets by less than 1. target_dev has stopped predicting test performance: its single-skill generated questions are easier than TPC-H's multi-condition reports, so they saturate first. Following the blog (the eval should mirror the real task, and difficulty should come from a human judgment of what is hard, not from test failures), I'm generating **hard** questions that combine 2–3 skills at report depth, with the same walled-off generator, to use as harder training prompts and a harder dev slice. Test failures were not used for this.
+
+### Ceiling calibration and the reasoning-length gap
+
+| Model (t=1.0 ×4) | TPC-H 22 | Fresh (30) | Probes (22) | median / p90 response words on TPC-H |
+|---|---|---|---|---|
+| Teacher 397B | **22.0** (22–22) | **29.25** | **22.0** | 511 / 1,745 |
+| 4B s03 final | 17.5 (16–18) | 24.75 | 18.25 | 359 / 602 |
+| 4B s04 final | 17.75 | 23.5 | 16.5 | |
+| 4B s06 final | 16.0 | 23.0 | 16.0 | |
+
+Under the same sampling the teacher is perfect, so 22/22 is reachable. The student **under-thinks on hard questions**: its p90 response length is about a third of the teacher's. Reverse KL is mode-seeking, and the training prompts are mostly easy, single-skill questions where the teacher's mode is a short answer, so the student never practices long reasoning. Next lever: harder multi-skill prompts (generating now), where the teacher reasons at length.
