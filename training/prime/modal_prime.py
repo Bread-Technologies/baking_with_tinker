@@ -98,8 +98,17 @@ def train(config_toml: str, run_name: str, extra_args: str = "", colocate: bool 
 
 
 @app.function(image=image, gpu="H100", volumes=VOLS, secrets=secrets, timeout=24 * 3600)
-def train1(config_toml: str, run_name: str, extra_args: str = ""):
-    """One GPU per experiment: vLLM and the LoRA trainer share it (small models use a fraction of an H100)."""
+def train1(config_toml: str, run_name: str, extra_args: str = "", init_from: str = ""):
+    """One GPU per experiment: vLLM and the LoRA trainer share it (small models use a fraction of an H100).
+
+    init_from: "<src_run>/<inner_run>/checkpoints/step_N" copied into this run before starting, to branch
+    a new experiment off another run's checkpoint (pair with [run] name=<inner_run> and [resume] step=N)."""
+    if init_from:
+        import shutil
+        src = Path("/outputs") / init_from
+        dst = Path("/outputs") / run_name / Path(init_from).relative_to(Path(init_from).parts[0])
+        if not dst.exists():
+            shutil.copytree(src, dst)
     return _train(config_toml, run_name, extra_args, colocate=True)
 
 

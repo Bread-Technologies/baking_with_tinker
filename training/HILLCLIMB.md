@@ -195,3 +195,9 @@ The repairs remove all execution-error failures (binder errors). Two TPC-H quest
 This is a small gain over s03 (mean +0.1 TPC-H, +0.4 fresh, +0.6 probes; probe vote 20 → 21). TPC-H stays at 20/22 under voting. One question is still wrong in every sample, and which question is second-hardest moved, which points to noise rather than a fixed gap. Diminishing returns on the 4B. Focus moves to the 2B, the goal model.
 
 2B (b01) step 100, 16 samples + 2 repairs: TPC-H mean 12.62 (10–16), **vote@16 16/22**; fresh mean 17.75, vote 21/30; probes mean 12.38, vote 15/22. Still climbing from step 80 (mean 11.25 → 12.62). Training continues to step 200; steps 120–200 are queued for the same eval.
+
+0.8B (b05) step 150, 16 samples + 2 repairs: TPC-H mean 6.19 (3–8), vote@16 10/22; fresh mean 6.62, vote 10/30; probes mean 4.19, vote 7/22. The 0.8B is far behind the 2B (mean 12.6 at step 100), so I stopped it at step ~150 (LoRAs kept on the volume) and gave its GPU to the 2B.
+
+### b07: branch the 2B off b01 step 110; one change, train data → hard_mix_train (as s10 did for the 4B)
+
+b01 keeps going on mix to step 200 as the control; b07 resumes the same checkpoint on hard_mix_train (171 hard multi-skill questions ×6 + mix) to step 200. Same lr, batch, and eval. Both are scored at matching steps with 16 samples + 2 repairs.

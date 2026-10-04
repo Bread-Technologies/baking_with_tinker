@@ -6,7 +6,7 @@ deployed app run independently of any local process.
 
   set -a; . "care package/.env"; set +a
   modal deploy training/prime/modal_prime.py
-  python training/prime/spawn.py <config.toml> <run_name> [extra_args]
+  python training/prime/spawn.py <config.toml> <run_name> [extra_args] [init_from]
 """
 
 import sys
@@ -16,6 +16,7 @@ import modal
 
 config, run_name = sys.argv[1], sys.argv[2]
 extra = sys.argv[3] if len(sys.argv) > 3 else ""
+init_from = sys.argv[4] if len(sys.argv) > 4 else ""  # branch off another run's checkpoint (see train1)
 fn = modal.Function.from_name("tpch-opd-prime", "train1")
-call = fn.spawn(Path(config).read_text(), run_name, extra)
+call = fn.spawn(Path(config).read_text(), run_name, extra, init_from)
 print(run_name, call.object_id)
