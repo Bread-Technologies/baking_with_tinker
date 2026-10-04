@@ -67,3 +67,13 @@ having trained on the test, with an honest account of how well it generalizes.
 The probe gain matches the TPC-H gain, so this is better reading and reasoning, not recall of memorized TPC-H answers. The fresh-set gain confirms it transfers to new TPC-H-schema questions.
 
 **target_dev check for P1** (150 questions × 2 samples, t=1.0): base **53.7% ±5.6** → P1 final **76.0% ±4.8**, +22 points. It moves together with TPC-H (+25), fresh (+17) and probes (+24), which confirms target_dev as the decision metric. Spider dev only moved +2 to +4 points.
+
+### Track comparison at 40 steps (4B, lr 1e-4, final checkpoints, t=1.0)
+
+| Run | target_dev | TPC-H 22 | Fresh (30) | Probes (22) |
+|---|---|---|---|---|
+| Base | 53.7% | 11.5 (11–13) | 18.0 (17–20) | 10.75 (9–12) |
+| P1 proxy (BIRD/Spider, no TPC-H schema) | 76.0% | **17.0** (14–19) | **23.0** (21–25) | 16.0 (13–18) |
+| P2 target (new TPC-H-schema questions) | **86.3%** | 15.75 (14–17) | 22.0 (21–23) | 16.0 (14–17) |
+
+**Finding:** target-track training gains +10 points on target_dev but nothing on the test sets. target_dev shares a generator, and so a style, with the target training data, so **it is biased toward the target track**. Rule change: target_dev decides LR, steps, rank and similar settings *within* a data mix. Data-mix choices are judged on proxy-vs-target parity, and confirmed later on the tests at checkpoints chosen in advance. The proxy track, which never sees the TPC-H schema, generalizes to TPC-H at least as well as the target track.
