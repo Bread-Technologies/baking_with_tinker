@@ -33,7 +33,7 @@ def done(run: str, step: int) -> bool:
     return SUMMARY.exists() and f"{run} step{step} tpch:" in SUMMARY.read_text()
 
 
-def evaluate(run: str, base: str, step: int, app: str, log_dir: Path):
+def evaluate(run: str, base: str, step: int, app: str, log_dir: Path, eval_args: str = "--samples 4"):
     name = f"{run}-s{step}"
     env = dict(os.environ, BASE=base, LORAS=f"{name}=/outputs/{run}/loras/step_{step}", MODAL_APP_NAME=app)
     r = subprocess.run("modal deploy tpch_eval/modal_serve_lora.py", shell=True, cwd=ROOT, env=env,
@@ -46,7 +46,7 @@ def evaluate(run: str, base: str, step: int, app: str, log_dir: Path):
     procs = {}
     for st in ("tpch", "fresh", "probe"):
         cmd = (f"{sys.executable} tpch_eval/eval.py --backend openai --base-url {url}/v1 --model {name} --thinking on "
-               f"--temperature 1.0 --top-p 0.95 --samples 4 --max-tokens 16384 --concurrency 88 --set {st}")
+               f"--temperature 1.0 --top-p 0.95 {eval_args} --max-tokens 16384 --concurrency 96 --set {st}")
         procs[st] = subprocess.Popen(cmd, shell=True, cwd=ROOT, stdout=open(log_dir / f"{name}_{st}.log", "w"),
                                      stderr=subprocess.STDOUT)
     for p in procs.values():
@@ -55,7 +55,8 @@ def evaluate(run: str, base: str, step: int, app: str, log_dir: Path):
     lines = []
     for st in ("tpch", "fresh", "probe"):
         m = re.search(r": ([0-9.]+/\d+ mean over .*)$", (log_dir / f"{name}_{st}.log").read_text(), flags=re.M)
-        lines.append(f"{run} step{step} {st}: {m.group(1) if m else 'FAILED'}")
+        v = re.search(r"majority-vote@\d+ \d+/\d+", (log_dir / f"{name}_{st}.log").read_text())
+        lines.append(f"{run} step{step} {st}: {m.group(1) if m else 'FAILED'}" + (f" | {v.group(0)}" if v else ""))
     with open(SUMMARY, "a") as f:
         f.write("\n".join(lines) + "\n")
     print("\n".join(lines), flush=True)
@@ -69,6 +70,7 @@ def main():
     ap.add_argument("--app", default="tpch-lora-auto")
     ap.add_argument("--log-dir", default="/tmp")
     ap.add_argument("--poll", type=int, default=300)
+    ap.add_argument("--eval-args", default="--samples 4", help="extra tpch_eval/eval.py args, e.g. '--samples 16 --retries 2'")
     args = ap.parse_args()
     steps = [int(s) for s in args.steps.split(",")]
     log_dir = Path(args.log_dir)
@@ -77,7 +79,7 @@ def main():
             if done(args.run, s):
                 steps.remove(s)
             elif lora_exists(args.run, s):
-                evaluate(args.run, args.base, s, args.app, log_dir)
+                evaluate(args.run, args.base, s, args.app, log_dir, args.eval_args)
                 steps.remove(s)
         if steps:
             time.sleep(args.poll)
