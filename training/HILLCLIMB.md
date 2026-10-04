@@ -119,3 +119,10 @@ About 3 are **flawed dev items**:
 So target_dev's ceiling is under 100%, and the 88–91% plateau is partly that ceiling. Configs separated by less than about 3 points can't be told apart on it.
 
 **Decision:** use the test sets (TPC-H 22, fresh, probes) only at the final checkpoints chosen in advance (step 200 for sweep S), and judge sweep S by those plus target_dev. Don't fix dev items by reading test failures. The ambiguous dev items can be dropped from target_dev, but that changes only the dev metric, never training.
+
+### prime-rl throughput fix (sweep B relaunched)
+- **Root cause:** the orchestrator awaited each finished episode's teacher scoring serially (`train_sink.add` → `finalize_episode`), at about 3 s per Tinker call × 128 episodes. That made 7–10 min/step.
+- **Fix** (`training/prime/patches/opd_concurrent_scoring.py`, applied at image build): `finalize_episode` starts the scoring task, and `finalize_group` awaits that group's tasks before it can enter a batch.
+- **Result:** 2B is 1.4–3.9 min/step (about 2.5 average) and 0.8B about 1.5 min/step, each on one H100 shared by vLLM and the trainer. Teacher calls now overlap about 3.5×.
+- Round 1 (2B proxy, 2 GPUs, unpatched) was stopped at about step 20 and replaced by b06 (2B proxy, lr 2e-4).
+- Untrained baselines on target_dev at step 0: 2B 0.7–1.3%, 0.8B 0%.
