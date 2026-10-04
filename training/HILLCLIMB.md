@@ -161,3 +161,14 @@ Under the same sampling the teacher is perfect, so 22/22 is reachable. The stude
 | b05 0.8B mix lr 2e-4 | 0.0% | **8.0%** |
 
 The 2B's training-set execution reward went from 0.07–0.15 to about 0.30 by step 35–40. Steps take 1–5 minutes; step 30 of b01 had a 40.9% rollout-error burst (router circuit breaker), recovered by step 40.
+
+### 2B (b01, prime-rl, mix lr 2e-4; batch 512 from step 30) on the test sets (t=1.0 ×4, Modal vLLM + LoRA)
+
+| step | TPC-H 22 | Fresh (30) | Probes (22) | unfinished thinking (TPC-H) |
+|---|---|---|---|---|
+| base | 3.0 | – | – | 37/88 |
+| 46 (batch 128) | 8.5 (7–11) | 9.0 | 8.0 | 20/88 |
+| 50 | 9.75 (9–10) | 12.75 | 10.5 | 11/88 |
+| 60 | 9.75 (8–12) | 12.75 | 10.5 | 14/88 |
+
+Gains are steady but slow. Operational notes: twice the runs were cancelled because they were launched with `modal run --detach`, which ties them to the local client; they are now spawned on the deployed app. The local eval driver also died with the sandbox's background processes, so evals now run as tracked background tasks, with scheduled check-ins as a backstop.
