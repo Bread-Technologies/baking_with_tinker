@@ -43,7 +43,8 @@ having trained on the test, with an honest account of how well it generalizes.
 | Qwen2.5-Coder-1.5B-Instruct | greedy | 4/22 |
 | Qwen3.5-2B | no thinking, greedy | 3/22 |
 | Qwen3.5-0.8B | no thinking, greedy | 1/22 |
-| Qwen3.5-2B / 0.8B | thinking, t=1.0 ×4 | (running) |
+| Qwen3.5-2B | thinking, t=1.0 ×4 | 3.0/22 (3–3); 37/88 answers never finished thinking within 16k tokens |
+| Qwen3.5-0.8B | thinking, t=1.0 ×4 | 0.25/22 (0–1); 12/88 never finished thinking |
 
 ## Rounds
 
