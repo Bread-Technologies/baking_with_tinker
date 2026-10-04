@@ -113,7 +113,7 @@ def main():
         except Exception as e:  # noqa: BLE001
             return {"id": row["id"], "correct": False, "reason": f"generation error: {e}", "sql": "", "response": ""}
         ok, sql, why = score(row, response)
-        return {"id": row["id"], "db_id": row["db_id"], "correct": ok, "reason": why, "sql": sql, "response": response}
+        return {"id": row["id"], "db_id": row.get("db_id", "tpch"), "correct": ok, "reason": why, "sql": sql, "response": response}
 
     with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         results = list(pool.map(work, rows))
