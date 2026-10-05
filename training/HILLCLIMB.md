@@ -258,3 +258,22 @@ Noise estimate: dial_exact step 170 was evaluated twice and gave TPC-H mean 11.6
 
 - b01 step 180: TPC-H mean 12.06 (vote 13), fresh 14.88 (18), probes 10.69 (14), Spider 78.3%. Down from step 160, so the run looks past its peak.
 - dial_exact step 190: TPC-H 13.94 (16), fresh 10.00 (12), probes 10.56 (14), Spider 66.0%.
+
+**Dial results so far (0.8B; single-sample mean, vote@16 in parentheses):**
+
+| point / step | TPC-H | fresh | probes | Spider |
+|---|---|---|---|---|
+| A clean s150 | 6.19 (10) | 6.62 (10) | 4.19 (7) | 65.7% |
+| control (mix only) s170 | 5.75 (9) | 8.81 (13) | 4.56 (8) | 63.7% |
+| B variants s190 | 13.69 (15) | 10.44 (13) | 10.19 (12) | 67.3% |
+| B variants s210 | 15.12 (19) | 10.69 (14) | 12.88 (15) | 66.0% |
+| C paraphrase s190 | 12.56 (15) | 8.94 (12) | 8.88 (10) | 67.7% |
+| D exact+mix s190 | 13.94 (16) | 10.00 (12) | 10.56 (14) | 66.0% |
+| D exact+mix s210 | 13.06 (17) | 10.50 (14) | 10.75 (16) | 68.7% |
+| E exact only s190 | 16.44 (18) | 9.12 (13) | 11.31 (14) | 58.3% |
+
+- The control isolates the step effect. Extra clean steps raise fresh (6.6 → 8.8) but not TPC-H (6.2 → 5.8). So every dial point's TPC-H gain (+7 to +10) comes from the dial data, not from training longer.
+- Fresh and probe gains over the control are small (+1–2 fresh), while the probes gain +4 to +8. The probes share the 22 templates, so the model learns the template shapes and transfers them to meaning-changed versions. That is template learning, not wording recall.
+- Only the pure-memorization point E costs broad generalization: Spider falls 66 → 58%.
+
+b01 step 200: TPC-H 13.19 (vote 18), fresh 17.00 (21), probes 11.69 (13), Spider 79.0%. b08 (lr 5e-5) is stable so far: truncation falling 29% → 17% and reward 0.23 → 0.35 over steps 161–176.
