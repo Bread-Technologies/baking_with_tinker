@@ -150,7 +150,7 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
       <li><b>The model learns shapes, not wording.</b> Rewording the 22 helped least at step 190, though it caught up by step 210 (14.8). The probes, which keep the shapes but change the meaning, rose almost as much as TPC-H.</li>
       <li><b>Pure memorization has a real cost and an expiry date.</b> Training on only the 22 prompts gives the highest TPC-H score but drops Spider by 7 points. Twenty steps later the run destabilized and every score fell, the 22 included.</li>
     </ul>
-    <p class="note">These runs train on the test by design. They are shown only as this trade-off curve and are never reported as benchmark results. The chart compares every run at step 190. At step 210, new constants reach 15.1 and rewording 14.8, both with Spider at 66–69%. The exact 22 with clean data reaches 13.1. The control's step 210 is pending.</p>
+    <p class="note">These runs train on the test by design. They are shown only as this trade-off curve and are never reported as benchmark results. The chart compares every run at step 190. At step 210, new constants reach 15.1 and rewording 14.8, both with Spider at 66–69%. The exact 22 with clean data reaches 13.1. The control at step 210 stays flat on TPC-H (6.3), while Spider rises to 71.7%.</p>
   </section>
 
   <section>

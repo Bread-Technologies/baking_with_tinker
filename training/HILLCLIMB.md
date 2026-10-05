@@ -288,3 +288,5 @@ Paraphrase was re-scored at steps 170 and 190 (duplicate evals): TPC-H 8.56 and 
 Dial at step 210: paraphrase 14.75 (vote 16), fresh 11.00, probes 10.31, Spider 68.7%. Rewording catches up with new-constants (15.12) given more steps.
 Control at step 190: TPC-H 6.50 (10), fresh 7.75 (11), probes 4.69 (9), Spider 67.7%. TPC-H stays flat with clean steps.
 Report published as an artifact; copy at training/results/report.html.
+
+Control at step 210: TPC-H 6.25 (vote 9), fresh 9.56 (13), probes 5.06 (8), Spider 71.7%. TPC-H stays flat after 60 clean steps.
