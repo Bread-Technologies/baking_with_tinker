@@ -290,3 +290,5 @@ Control at step 190: TPC-H 6.50 (10), fresh 7.75 (11), probes 4.69 (9), Spider 6
 Report published as an artifact; copy at training/results/report.html.
 
 Control at step 210: TPC-H 6.25 (vote 9), fresh 9.56 (13), probes 5.06 (8), Spider 71.7%. TPC-H stays flat after 60 clean steps.
+
+**b08 step 220 (final):** TPC-H mean 15.62, vote 19/22; fresh 19.69 (23/30); probes 12.75 (16/22); Spider 79.3%. TPC-H mean is the best yet, but step 200 is better on probes and Spider, so it is the recommended checkpoint. All training is complete.

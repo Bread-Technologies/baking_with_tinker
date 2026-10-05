@@ -58,7 +58,7 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
     <div class="eyebrow">On-policy distillation · Qwen3.5-397B → Qwen3.5-2B · TPC-H (DuckDB)</div>
     <h1>A 2B model that writes analytical SQL, taught by a 397B teacher</h1>
     <p class="lede">The teacher (Qwen3.5-397B-A17B) solves all 22 TPC-H questions. With on-policy distillation and no training on the benchmark, the 2B student goes from 10/22 to 19/22 by majority vote, and from 4.3 to 14.9 on a single answer. It also improves on questions it has never seen and on a second benchmark, Spider.</p>
-    <p class="meta">Status as of Oct 5, 2026, 03:50 UTC. Cells marked “pending” fill in when the last runs finish.</p>
+    <p class="meta">Final as of Oct 5, 2026, 05:00 UTC. All training runs are complete.</p>
   </header>
 
   <div class="callouts">
@@ -96,13 +96,14 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
         <tr><td>2B, step 160</td><td>13.4 <span class="v">(17)</span></td><td>19.1 <span class="v">(24)</span></td><td>12.0 <span class="v">(17)</span></td><td>81.3%</td></tr>
         <tr><td>2B, step 180, harder questions at a lower learning rate</td><td>14.4 <span class="v">(19)</span></td><td>19.5 <span class="v">(25)</span></td><td>12.6 <span class="v">(17)</span></td><td>81.7%</td></tr>
         <tr class="hl"><td>2B, step 200, same run</td><td>14.9 <span class="v">(19)</span></td><td>19.2 <span class="v">(22)</span></td><td>13.7 <span class="v">(18)</span></td><td>82.3%</td></tr>
+        <tr><td>2B, step 220, same run (final)</td><td>15.6 <span class="v">(19)</span></td><td>19.7 <span class="v">(23)</span></td><td>12.8 <span class="v">(16)</span></td><td>79.3%</td></tr>
         <tr class="sub"><td>4B untrained (single answer, no retries)</td><td>11.5</td><td>—</td><td>—</td><td>—</td></tr>
         <tr><td>4B, best (Tinker)</td><td>18.9 <span class="v">(20)</span></td><td>26.9 <span class="v">(28)</span></td><td>19.6 <span class="v">(21)</span></td><td>—</td></tr>
         <tr class="sub"><td>0.8B untrained</td><td>0.1 <span class="v">(1)</span></td><td>0.4 <span class="v">(3)</span></td><td>0.3 <span class="v">(2)</span></td><td>29.7%</td></tr>
         <tr><td>0.8B, step 150</td><td>6.2 <span class="v">(10)</span></td><td>6.6 <span class="v">(10)</span></td><td>4.2 <span class="v">(7)</span></td><td>65.7%</td></tr>
       </tbody>
     </table></div>
-    <p class="note" style="margin-top:8px">The 2B at step 220 (the last step) is pending. Measurement noise is about ±0.5 on single-answer averages and ±2 on votes.</p>
+    <p class="note" style="margin-top:8px">Step 220 has the best TPC-H single-answer average, but step 200 is the best balanced checkpoint across probes and Spider, so it is the one I recommend. Measurement noise is about ±0.5 on single-answer averages and ±2 on votes.</p>
   </section>
 
   <section>
@@ -173,7 +174,7 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
 
   <section>
     <h2>Where things are</h2>
-    <p>Code and the full log are on branch <code>claude/tinker-work</code>, in <code>training/HILLCLIMB.md</code>. All LoRA adapters are on the Modal volume <code>tpch-opd-outputs</code>, under <code>&lt;run&gt;/loras/step_N</code>. The best 2B is <code>b08_2b_hardmix_lr5e-5_from160/loras/step_180</code>.</p>
+    <p>Code and the full log are on branch <code>claude/tinker-work</code>, in <code>training/HILLCLIMB.md</code>. All LoRA adapters are on the Modal volume <code>tpch-opd-outputs</code>, under <code>&lt;run&gt;/loras/step_N</code>. The recommended 2B is <code>b08_2b_hardmix_lr5e-5_from160/loras/step_200</code>.</p>
   </section>
 </div>
 

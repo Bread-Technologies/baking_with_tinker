@@ -154,3 +154,7 @@ dial_0p8b_clean step210 tpch: 6.25/22 mean over 16 sample(s) (range 3-8) | major
 dial_0p8b_clean step210 fresh: 9.56/30 mean over 16 sample(s) (range 8-12) | majority-vote@16 13/30
 dial_0p8b_clean step210 probe: 5.06/22 mean over 16 sample(s) (range 3-8) | majority-vote@16 8/22
 dial_0p8b_clean step210 spider_test: 215/300 = 0.717 ± 0.051
+b08_2b_hardmix_lr5e-5_from160 step220 tpch: 15.62/22 mean over 16 sample(s) (range 12-18) | majority-vote@16 19/22
+b08_2b_hardmix_lr5e-5_from160 step220 fresh: 19.69/30 mean over 16 sample(s) (range 17-23) | majority-vote@16 23/30
+b08_2b_hardmix_lr5e-5_from160 step220 probe: 12.75/22 mean over 16 sample(s) (range 10-15) | majority-vote@16 16/22
+b08_2b_hardmix_lr5e-5_from160 step220 spider_test: 238/300 = 0.793 ± 0.046
