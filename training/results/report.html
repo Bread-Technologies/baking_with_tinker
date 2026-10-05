@@ -57,14 +57,14 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
   <header>
     <div class="eyebrow">On-policy distillation · Qwen3.5-397B → Qwen3.5-2B · TPC-H (DuckDB)</div>
     <h1>A 2B model that writes analytical SQL, taught by a 397B teacher</h1>
-    <p class="lede">The teacher (Qwen3.5-397B-A17B) solves all 22 TPC-H questions. With on-policy distillation and no training on the benchmark, the 2B student goes from 10/22 to 19/22 by majority vote. It also improves on questions it has never seen and on a second benchmark, Spider.</p>
-    <p class="meta">Status as of Oct 5, 2026, 02:30 UTC. Cells marked “pending” fill in when the last runs finish.</p>
+    <p class="lede">The teacher (Qwen3.5-397B-A17B) solves all 22 TPC-H questions. With on-policy distillation and no training on the benchmark, the 2B student goes from 10/22 to 19/22 by majority vote, and from 4.3 to 14.9 on a single answer. It also improves on questions it has never seen and on a second benchmark, Spider.</p>
+    <p class="meta">Status as of Oct 5, 2026, 03:50 UTC. Cells marked “pending” fill in when the last runs finish.</p>
   </header>
 
   <div class="callouts">
     <div class="callout"><span class="n">10 → 19 <small style="font-size:.9rem">/ 22</small></span><span class="l">2B on TPC-H, majority vote of 16 answers (untrained → trained)</span></div>
-    <div class="callout"><span class="n">4.3 → 14.4</span><span class="l">2B on TPC-H, a single answer (average of 16 tries)</span></div>
-    <div class="callout"><span class="n">73.7% → 81.7%</span><span class="l">2B on Spider test, a benchmark it never trained on</span></div>
+    <div class="callout"><span class="n">4.3 → 14.9</span><span class="l">2B on TPC-H, a single answer (average of 16 tries)</span></div>
+    <div class="callout"><span class="n">73.7% → 82.3%</span><span class="l">2B on Spider test, a benchmark it never trained on</span></div>
   </div>
 
   <section>
@@ -94,14 +94,15 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
         <tr class="sub"><td>2B untrained</td><td>4.3 <span class="v">(10)</span></td><td>5.5 <span class="v">(10)</span></td><td>3.3 <span class="v">(8)</span></td><td>73.7%</td></tr>
         <tr><td>2B, step 100</td><td>12.6 <span class="v">(16)</span></td><td>17.8 <span class="v">(21)</span></td><td>12.4 <span class="v">(15)</span></td><td>—</td></tr>
         <tr><td>2B, step 160</td><td>13.4 <span class="v">(17)</span></td><td>19.1 <span class="v">(24)</span></td><td>12.0 <span class="v">(17)</span></td><td>81.3%</td></tr>
-        <tr class="hl"><td>2B, step 180, harder questions at a lower learning rate</td><td>14.4 <span class="v">(19)</span></td><td>19.5 <span class="v">(25)</span></td><td>12.6 <span class="v">(17)</span></td><td>81.7%</td></tr>
+        <tr><td>2B, step 180, harder questions at a lower learning rate</td><td>14.4 <span class="v">(19)</span></td><td>19.5 <span class="v">(25)</span></td><td>12.6 <span class="v">(17)</span></td><td>81.7%</td></tr>
+        <tr class="hl"><td>2B, step 200, same run</td><td>14.9 <span class="v">(19)</span></td><td>19.2 <span class="v">(22)</span></td><td>13.7 <span class="v">(18)</span></td><td>82.3%</td></tr>
         <tr class="sub"><td>4B untrained (single answer, no retries)</td><td>11.5</td><td>—</td><td>—</td><td>—</td></tr>
         <tr><td>4B, best (Tinker)</td><td>18.9 <span class="v">(20)</span></td><td>26.9 <span class="v">(28)</span></td><td>19.6 <span class="v">(21)</span></td><td>—</td></tr>
         <tr class="sub"><td>0.8B untrained</td><td>0.1 <span class="v">(1)</span></td><td>0.4 <span class="v">(3)</span></td><td>0.3 <span class="v">(2)</span></td><td>29.7%</td></tr>
         <tr><td>0.8B, step 150</td><td>6.2 <span class="v">(10)</span></td><td>6.6 <span class="v">(10)</span></td><td>4.2 <span class="v">(7)</span></td><td>65.7%</td></tr>
       </tbody>
     </table></div>
-    <p class="note" style="margin-top:8px">The 2B at step 180 is still training (steps 200 and 220 pending). Measurement noise is about ±0.5 on single-answer averages and ±2 on votes.</p>
+    <p class="note" style="margin-top:8px">The 2B at step 220 (the last step) is pending. Measurement noise is about ±0.5 on single-answer averages and ±2 on votes.</p>
   </section>
 
   <section>
@@ -135,7 +136,7 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
       <thead><tr><th>0.8B training data (step)</th><th>TPC-H /22</th><th>Fresh /30</th><th>Probes /22</th><th>Spider</th></tr></thead>
       <tbody>
         <tr class="sub"><td>Clean start (150)</td><td>6.2 <span class="v">(10)</span></td><td>6.6 <span class="v">(10)</span></td><td>4.2 <span class="v">(7)</span></td><td>65.7%</td></tr>
-        <tr><td>Control: more clean training (170)</td><td>5.8 <span class="v">(9)</span></td><td>8.8 <span class="v">(13)</span></td><td>4.6 <span class="v">(8)</span></td><td>63.7%</td></tr>
+        <tr><td>Control: more clean training (190)</td><td>6.5 <span class="v">(10)</span></td><td>7.8 <span class="v">(11)</span></td><td>4.7 <span class="v">(9)</span></td><td>67.7%</td></tr>
         <tr><td>The 22 query shapes with new constants (190)</td><td>13.7 <span class="v">(15)</span></td><td>10.4 <span class="v">(13)</span></td><td>10.2 <span class="v">(12)</span></td><td>67.3%</td></tr>
         <tr><td>The 22 reworded, same meaning (190)</td><td>12.6 <span class="v">(15)</span></td><td>8.9 <span class="v">(12)</span></td><td>8.9 <span class="v">(10)</span></td><td>67.7%</td></tr>
         <tr><td>The exact 22, mixed with clean data (190)</td><td>13.9 <span class="v">(16)</span></td><td>10.0 <span class="v">(12)</span></td><td>10.6 <span class="v">(14)</span></td><td>66.0%</td></tr>
@@ -144,12 +145,12 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
       </tbody>
     </table></div>
     <ul style="margin-top:14px">
-      <li><b>The TPC-H gain comes from the data, not from extra steps.</b> The control's extra training lifts fresh questions but leaves TPC-H flat. Every near-test variant adds 7–10 TPC-H points.</li>
+      <li><b>The TPC-H gain comes from the data, not from extra steps.</b> Forty more steps of clean training leave TPC-H flat (6.2 → 6.5). Every near-test variant adds 7–10 TPC-H points.</li>
       <li><b>Most of the gain needs no memorization.</b> Training on the 22 query shapes with new constants gets within about 3 points of training on the exact 22, and Spider holds or improves.</li>
-      <li><b>The model learns shapes, not wording.</b> Rewording the 22 helped least. The probes, which keep the shapes but change the meaning, rose almost as much as TPC-H.</li>
+      <li><b>The model learns shapes, not wording.</b> Rewording the 22 helped least at step 190, though it caught up by step 210 (14.8). The probes, which keep the shapes but change the meaning, rose almost as much as TPC-H.</li>
       <li><b>Pure memorization has a real cost and an expiry date.</b> Training on only the 22 prompts gives the highest TPC-H score but drops Spider by 7 points. Twenty steps later the run destabilized and every score fell, the 22 included.</li>
     </ul>
-    <p class="note">These runs train on the test by design. They are shown only as this trade-off curve and are never reported as benchmark results. Steps 210 for the reworded run and for the control are pending.</p>
+    <p class="note">These runs train on the test by design. They are shown only as this trade-off curve and are never reported as benchmark results. The chart compares every run at step 190. At step 210, new constants reach 15.1 and rewording 14.8, both with Spider at 66–69%. The exact 22 with clean data reaches 13.1. The control's step 210 is pending.</p>
   </section>
 
   <section>
@@ -180,10 +181,10 @@ code { font: 13px var(--mono); background: var(--panel); padding: 1px 4px; borde
 (function () {
   const X = ["Clean start", "Control", "New constants", "Reworded", "Exact 22 + mix", "Exact 22 only"];
   const S = [
-    { name: "TPC-H", c: "--s1", v: [6.19/22, 5.75/22, 13.69/22, 12.56/22, 13.94/22, 16.44/22] },
-    { name: "Probes", c: "--s2", v: [4.19/22, 4.56/22, 10.19/22, 8.88/22, 10.56/22, 11.31/22] },
-    { name: "Fresh", c: "--s3", v: [6.62/30, 8.81/30, 10.44/30, 8.94/30, 10.00/30, 9.12/30] },
-    { name: "Spider", c: "--s4", v: [.657, .637, .673, .677, .660, .583] },
+    { name: "TPC-H", c: "--s1", v: [6.19/22, 6.50/22, 13.69/22, 12.56/22, 13.94/22, 16.44/22] },
+    { name: "Probes", c: "--s2", v: [4.19/22, 4.69/22, 10.19/22, 8.88/22, 10.56/22, 11.31/22] },
+    { name: "Fresh", c: "--s3", v: [6.62/30, 7.75/30, 10.44/30, 8.94/30, 10.00/30, 9.12/30] },
+    { name: "Spider", c: "--s4", v: [.657, .677, .673, .677, .660, .583] },
   ];
   const svg = document.getElementById("dial"), NS = "http://www.w3.org/2000/svg";
   const L = 46, R = 560, T = 14, B = 290;

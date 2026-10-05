@@ -283,3 +283,8 @@ b01 step 200: TPC-H 13.19 (vote 18), fresh 17.00 (21), probes 11.69 (13), Spider
 **Dial E (exact only) collapses at step 210:** TPC-H 9.25 (vote 11), fresh 5.25, probes 4.75, Spider 53.0%. Over steps 195–210 train reward oscillates 0.43–0.70 and truncation 12–47%. Training on only 22 prompts peaks around step 190 and then destabilizes everything, the 22 included.
 
 Paraphrase was re-scored at steps 170 and 190 (duplicate evals): TPC-H 8.56 and 12.38, against 8.75 and 12.56 before, which is consistent within noise.
+
+**b08 step 200:** TPC-H mean **14.88**, vote 19/22; fresh 19.19 (22/30); probes 13.69 (**18/22**); Spider **82.3%**. New best clean 2B.
+Dial at step 210: paraphrase 14.75 (vote 16), fresh 11.00, probes 10.31, Spider 68.7%. Rewording catches up with new-constants (15.12) given more steps.
+Control at step 190: TPC-H 6.50 (10), fresh 7.75 (11), probes 4.69 (9), Spider 67.7%. TPC-H stays flat with clean steps.
+Report published as an artifact; copy at training/results/report.html.
