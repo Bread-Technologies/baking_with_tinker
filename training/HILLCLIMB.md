@@ -277,3 +277,9 @@ Noise estimate: dial_exact step 170 was evaluated twice and gave TPC-H mean 11.6
 - Only the pure-memorization point E costs broad generalization: Spider falls 66 → 58%.
 
 b01 step 200: TPC-H 13.19 (vote 18), fresh 17.00 (21), probes 11.69 (13), Spider 79.0%. b08 (lr 5e-5) is stable so far: truncation falling 29% → 17% and reward 0.23 → 0.35 over steps 161–176.
+
+**b08 step 180** (2B, hard_mix at lr 5e-5, branched from b01 step 160): TPC-H mean **14.44**, **vote 19/22**; fresh 19.50 (25/30); probes 12.56 (17/22); Spider 81.7%. This is the best clean 2B on every axis. The lower lr fixed the b07 collapse.
+
+**Dial E (exact only) collapses at step 210:** TPC-H 9.25 (vote 11), fresh 5.25, probes 4.75, Spider 53.0%. Over steps 195–210 train reward oscillates 0.43–0.70 and truncation 12–47%. Training on only 22 prompts peaks around step 190 and then destabilizes everything, the 22 included.
+
+Paraphrase was re-scored at steps 170 and 190 (duplicate evals): TPC-H 8.56 and 12.38, against 8.75 and 12.56 before, which is consistent within noise.
